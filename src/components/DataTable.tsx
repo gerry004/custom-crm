@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { FiSearch, FiTrash2, FiMove } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
@@ -17,6 +19,7 @@ interface DataTableProps {
 const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this entry?')) {
@@ -50,12 +53,17 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   const formatCellValue = (value: any, key: string) => {
     if (value === null || value === undefined) return '';
     
-    // Check if the field is a date field
     if (['lastContact', 'createdAt', 'updatedAt'].includes(key) && value) {
       return formatDate(value);
     }
     return value;
   };
+
+  const filteredData = data.filter((row) => {
+    if (!searchQuery) return true;
+    const name = String(row.name || '').toLowerCase();
+    return name.includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="w-full">
@@ -63,7 +71,7 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold capitalize">{type}</h2>
           <span className="bg-blue-500 text-white text-sm px-2 py-1 rounded-full">
-            {data.length}
+            {filteredData.length}
           </span>
         </div>
         
@@ -73,6 +81,8 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
             <input
               type="text"
               placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -103,33 +113,58 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
-            {data.map((row, index) => (
-              <tr
-                key={index}
-                className="text-gray-300 hover:bg-[#2f2f2f]"
-              >
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    className="px-6 py-4 text-sm whitespace-nowrap"
-                  >
-                    {formatCellValue(row[column.key], column.key)}
+            {filteredData.length > 0 ? (
+              filteredData.map((row, index) => (
+                <tr
+                  key={index}
+                  className="text-gray-300 hover:bg-[#2f2f2f]"
+                >
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      className="px-6 py-4 text-sm whitespace-nowrap"
+                    >
+                      {formatCellValue(row[column.key], column.key)}
+                    </td>
+                  ))}
+                  <td className="px-6 py-4 text-sm whitespace-nowrap">
+                    <button
+                      onClick={() => handleDelete(row.id)}
+                      disabled={isDeleting === row.id}
+                      className={`text-gray-400 hover:text-red-500 transition-colors ${
+                        isDeleting === row.id ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      title="Delete"
+                    >
+                      <FiTrash2 size={18} />
+                    </button>
                   </td>
-                ))}
-                <td className="px-6 py-4 text-sm whitespace-nowrap">
-                  <button
-                    onClick={() => handleDelete(row.id)}
-                    disabled={isDeleting === row.id}
-                    className={`text-gray-400 hover:text-red-500 transition-colors ${
-                      isDeleting === row.id ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    title="Delete"
-                  >
-                    <FiTrash2 size={18} />
-                  </button>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td 
+                  colSpan={columns.length + 1} 
+                  className="px-6 py-8 text-center text-gray-400"
+                >
+                  {data.length === 0 ? (
+                    <div>
+                      <p className="text-lg mb-2">No {type} found</p>
+                      <p className="text-sm">
+                        Click the "New {type.slice(0, -1)}" button to add one
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-lg mb-2">No matching {type} found</p>
+                      <p className="text-sm">
+                        Try adjusting your search query
+                      </p>
+                    </div>
+                  )}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

@@ -24,6 +24,8 @@ export default function CustomersPage() {
       const columnsData = await columnsResponse.json();
       const customersData = await customersResponse.json();
 
+      console.log('Fetched customers:', customersData);
+
       const formattedColumns = columnsData.map((column: string) => ({
         key: column
           .toLowerCase()
@@ -53,12 +55,14 @@ export default function CustomersPage() {
 
   return (
     <Layout>
-      <DataTable
-        columns={columns}
-        data={customers}
-        type="customers"
-        onRefresh={fetchData}
-      />
+      <div onClick={() => console.log('Layout clicked')}>
+        <DataTable
+          columns={columns}
+          data={customers}
+          type="customers"
+          onRefresh={fetchData}
+        />
+      </div>
     </Layout>
   );
 } 
