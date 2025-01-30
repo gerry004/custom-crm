@@ -24,7 +24,8 @@
     "postcss": "^8.x",
     "tailwindcss": "^3.x",
     "ts-node": "^10.9.2",
-    "typescript": "^5.x"
+    "typescript": "^5.x",
+    "prisma": "^6.3.0"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
