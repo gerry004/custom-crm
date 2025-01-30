@@ -38,8 +38,14 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     
+    // Set default values if not provided
+    const leadData = {
+      ...data,
+      status: data.status || 'New',
+    };
+
     const lead = await prisma.lead.create({
-      data: data
+      data: leadData
     });
     
     return NextResponse.json(lead);

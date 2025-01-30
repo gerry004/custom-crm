@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiX } from 'react-icons/fi';
+import StatusDropdown from './StatusDropdown';
 
 interface CreateEntryModalProps {
   isOpen: boolean;
@@ -38,6 +39,15 @@ const CUSTOMER_STATUS_COLORS = {
 
 const CUSTOMER_STATUSES = ['Active', 'Inactive', 'Pending'] as const;
 
+const LEAD_STATUS_COLORS = {
+  'New': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
+  'Contacted': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
+  'Qualified': 'bg-green-500/20 text-green-500 border-green-500/50',
+  'Lost': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
+} as const;
+
+const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'] as const;
+
 const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateEntryModalProps) => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,7 +69,7 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
     if (keyLower.includes('email')) return 'email';
     if (keyLower.includes('phone')) return 'tel';
     if (keyLower === 'lastcontact' || keyLower.includes('date')) return 'date';
-    if (keyLower === 'status' && (type === 'tasks' || type === 'customers')) return 'select';
+    if (keyLower === 'status' && (type === 'tasks' || type === 'customers' || type === 'leads')) return 'select';
     if (keyLower === 'priority' && type === 'tasks') return 'select';
     return 'text';
   };
@@ -168,34 +178,19 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
                     {column.label}
                   </label>
                   {inputType === 'select' ? (
-                    <select
+                    <StatusDropdown
+                      type={
+                        type === 'tasks'
+                          ? column.key === 'status'
+                            ? 'task-status'
+                            : 'task-priority'
+                          : type === 'customers'
+                          ? 'customer-status'
+                          : 'lead-status'
+                      }
                       value={value}
-                      onChange={(e) => handleInputChange(column.key, e.target.value)}
-                      className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
-                    >
-                      <option value="">Select {column.label}</option>
-                      {type === 'tasks' ? (
-                        column.key === 'status' ? (
-                          TASK_STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))
-                        ) : (
-                          TASK_PRIORITIES.map((priority) => (
-                            <option key={priority} value={priority}>
-                              {priority}
-                            </option>
-                          ))
-                        )
-                      ) : (
-                        CUSTOMER_STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))
-                      )}
-                    </select>
+                      onChange={(value) => handleInputChange(column.key, value)}
+                    />
                   ) : (
                     <input
                       type={inputType}

@@ -3,6 +3,9 @@
 import React from 'react';
 import { FiSearch, FiTrash2, FiMove, FiEdit2 } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
+import StatusDropdown, {
+  STATUS_COLORS,
+} from './StatusDropdown';
 
 interface Column {
   key: string;
@@ -19,12 +22,6 @@ interface DataTableProps {
 // Move these outside component to avoid recreating on each render
 const TIMESTAMP_FIELDS = ['createdAt', 'updatedAt'] as const;
 const DATE_FORMAT_FIELDS = ['lastContact', 'createdAt', 'updatedAt', 'dueDate'] as const;
-
-const STATUS_COLORS = {
-  'To Do': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
-  'In Progress': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
-  'Done': 'bg-green-500/20 text-green-500 border-green-500/50',
-} as const;
 
 const TASK_STATUSES = ['To Do', 'In Progress', 'Done'] as const;
 
@@ -43,6 +40,15 @@ const CUSTOMER_STATUS_COLORS = {
 } as const;
 
 const CUSTOMER_STATUSES = ['Active', 'Inactive', 'Pending'] as const;
+
+const LEAD_STATUS_COLORS = {
+  'New': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
+  'Contacted': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
+  'Qualified': 'bg-green-500/20 text-green-500 border-green-500/50',
+  'Lost': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
+} as const;
+
+const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'] as const;
 
 const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -170,6 +176,13 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
           </span>
         );
       }
+      if (type === 'leads') {
+        return (
+          <span className={`px-2 py-1 rounded-full text-sm border ${LEAD_STATUS_COLORS[value as keyof typeof LEAD_STATUS_COLORS]}`}>
+            {value}
+          </span>
+        );
+      }
     }
 
     if (key === 'priority' && type === 'tasks') {
@@ -195,7 +208,8 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
     if (TIMESTAMP_FIELDS.includes(column.key as any)) return;
     
     if ((type === 'tasks' && (column.key === 'status' || column.key === 'priority')) ||
-        (type === 'customers' && column.key === 'status')) {
+        (type === 'customers' && column.key === 'status') ||
+        (type === 'leads' && column.key === 'status')) {
       setEditingCell({
         id: row.id,
         key: column.key,
@@ -331,38 +345,23 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
                     >
                       {editingCell?.id === row.id && editingCell?.key === column.key ? (
                         ((type === 'tasks' && (column.key === 'status' || column.key === 'priority')) ||
-                         (type === 'customers' && column.key === 'status')) ? (
-                          <select
-                            autoFocus
-                            className="bg-[#2f2f2f] text-white px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         (type === 'customers' && column.key === 'status') ||
+                         (type === 'leads' && column.key === 'status')) ? (
+                          <StatusDropdown
+                            type={
+                              type === 'tasks'
+                                ? column.key === 'status'
+                                  ? 'task-status'
+                                  : 'task-priority'
+                                : type === 'customers'
+                                ? 'customer-status'
+                                : 'lead-status'
+                            }
                             value={editingCell.value}
-                            onChange={(e) => {
-                              handleCellEdit(row.id, column.key, e.target.value);
-                            }}
+                            onChange={(value) => handleCellEdit(row.id, column.key, value)}
                             onBlur={() => setEditingCell(null)}
-                          >
-                            {type === 'tasks' ? (
-                              column.key === 'status' ? (
-                                TASK_STATUSES.map((status) => (
-                                  <option key={status} value={status}>
-                                    {status}
-                                  </option>
-                                ))
-                              ) : (
-                                TASK_PRIORITIES.map((priority) => (
-                                  <option key={priority} value={priority}>
-                                    {priority}
-                                  </option>
-                                ))
-                              )
-                            ) : (
-                              CUSTOMER_STATUSES.map((status) => (
-                                <option key={status} value={status}>
-                                  {status}
-                                </option>
-                              ))
-                            )}
-                          </select>
+                            autoFocus
+                          />
                         ) : (
                           <input
                             type="text"
