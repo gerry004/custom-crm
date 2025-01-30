@@ -32,4 +32,26 @@ export async function GET() {
     // Always disconnect after the operation
     await prisma.$disconnect();
   }
+}
+
+export async function POST(request: Request) {
+  try {
+    const data = await request.json();
+    
+    const lead = await prisma.lead.create({
+      data: data
+    });
+    
+    return NextResponse.json(lead);
+  } catch (error) {
+    console.error('Error creating lead:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json(
+      { 
+        error: 'Failed to create lead',
+        details: errorMessage 
+      },
+      { status: 500 }
+    );
+  }
 } 

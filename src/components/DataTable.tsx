@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiSearch } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 
 interface Column {
@@ -11,10 +11,36 @@ interface DataTableProps {
   columns: Column[];
   data: any[];
   type: 'customers' | 'leads';
+  onRefresh?: () => void;
 }
 
-const DataTable = ({ columns, data, type }: DataTableProps) => {
+const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this entry?')) {
+      return;
+    }
+
+    setIsDeleting(id);
+    try {
+      const response = await fetch(`/api/${type}/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete entry');
+      }
+
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      alert('Failed to delete entry');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -71,13 +97,16 @@ const DataTable = ({ columns, data, type }: DataTableProps) => {
                   {column.label}
                 </th>
               ))}
+              <th className="px-6 py-3 text-left text-sm font-medium">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
             {data.map((row, index) => (
               <tr
                 key={index}
-                className="text-gray-300 hover:bg-[#2f2f2f] cursor-pointer"
+                className="text-gray-300 hover:bg-[#2f2f2f]"
               >
                 {columns.map((column) => (
                   <td
@@ -87,6 +116,18 @@ const DataTable = ({ columns, data, type }: DataTableProps) => {
                     {formatCellValue(row[column.key], column.key)}
                   </td>
                 ))}
+                <td className="px-6 py-4 text-sm whitespace-nowrap">
+                  <button
+                    onClick={() => handleDelete(row.id)}
+                    disabled={isDeleting === row.id}
+                    className={`text-gray-400 hover:text-red-500 transition-colors ${
+                      isDeleting === row.id ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    title="Delete"
+                  >
+                    <FiTrash2 size={18} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -97,6 +138,8 @@ const DataTable = ({ columns, data, type }: DataTableProps) => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         type={type}
+        columns={columns}
+        onSuccess={onRefresh}
       />
     </div>
   );

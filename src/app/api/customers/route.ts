@@ -28,4 +28,31 @@ export async function GET() {
   } finally {
     await prisma.$disconnect();
   }
+}
+
+export async function POST(request: Request) {
+  try {
+    const data = await request.json();
+    
+    // Convert lastContact to Date if it exists
+    if (data.lastContact) {
+      data.lastContact = new Date(data.lastContact);
+    }
+
+    const customer = await prisma.customer.create({
+      data: data
+    });
+    
+    return NextResponse.json(customer);
+  } catch (error) {
+    console.error('Error creating customer:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json(
+      { 
+        error: 'Failed to create customer',
+        details: errorMessage 
+      },
+      { status: 500 }
+    );
+  }
 } 

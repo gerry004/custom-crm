@@ -24,12 +24,12 @@ export async function GET() {
       );
     }
 
-    // Get the columns from the correct table
+    // Get the columns from the correct table, excluding automatic timestamp fields
     const columns = await prisma.$queryRaw<Array<{ column_name: string }>>`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = ${customerTable}
-      AND column_name NOT IN ('id', 'createdAt', 'updatedAt')
+      AND column_name NOT IN ('id')
       ORDER BY ordinal_position;
     `;
 
