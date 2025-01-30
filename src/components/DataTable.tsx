@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FiSearch, FiTrash2, FiMove } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove, FiEdit2 } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 
 interface Column {
@@ -16,10 +16,24 @@ interface DataTableProps {
   onRefresh?: () => void;
 }
 
+// Move these outside component to avoid recreating on each render
+const TIMESTAMP_FIELDS = ['createdAt', 'updatedAt'] as const;
+const DATE_FORMAT_FIELDS = ['lastContact', 'createdAt', 'updatedAt'] as const;
+
 const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [editingCell, setEditingCell] = React.useState<{
+    id: number;
+    key: string;
+    value: any;
+  } | null>(null);
+  const [localData, setLocalData] = React.useState(data);
+
+  React.useEffect(() => {
+    setLocalData(data);
+  }, [data]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this entry?')) {
@@ -36,6 +50,8 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
         throw new Error('Failed to delete entry');
       }
 
+      // Remove the deleted item from localData
+      setLocalData(prevData => prevData.filter(item => item.id !== id));
       onRefresh?.();
     } catch (error) {
       console.error('Error deleting entry:', error);
@@ -45,25 +61,97 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} ${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  const handleCellEdit = async (id: number, key: string, newValue: any) => {
+    try {
+      const response = await fetch(`/api/${type}/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [key]: newValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update entry');
+      }
+
+      const updatedEntry = await response.json();
+      
+      setLocalData(prevData => 
+        prevData.map(item => item.id === id ? updatedEntry : item)
+      );
+    } catch (error) {
+      console.error('Error updating entry:', error);
+      alert('Failed to update entry');
+    } finally {
+      setEditingCell(null);
+    }
   };
 
-  const formatCellValue = (value: any, key: string) => {
+  const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>, row: any) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    } else if (e.key === 'Escape') {
+      if (editingCell) {
+        setEditingCell({
+          ...editingCell,
+          value: row[editingCell.key]
+        });
+      }
+      setEditingCell(null);
+    }
+  }, [editingCell]);
+
+  const handleInputBlur = React.useCallback((row: any) => {
+    if (!editingCell) return;
+    
+    if (editingCell.value !== row[editingCell.key]) {
+      handleCellEdit(row.id, editingCell.key, editingCell.value);
+    } else {
+      setEditingCell(null);
+    }
+  }, [editingCell]);
+
+  const formatDate = React.useCallback((dateString: string) => {
+    const date = new Date(dateString);
+    return [
+      date.getHours().toString().padStart(2, '0'),
+      ':',
+      date.getMinutes().toString().padStart(2, '0'),
+      ' ',
+      date.getDate().toString().padStart(2, '0'),
+      '/',
+      (date.getMonth() + 1).toString().padStart(2, '0'),
+      '/',
+      date.getFullYear()
+    ].join('');
+  }, []);
+
+  const formatCellValue = React.useCallback((value: any, key: string) => {
     if (value === null || value === undefined) return '';
     
-    if (['lastContact', 'createdAt', 'updatedAt'].includes(key) && value) {
+    if (DATE_FORMAT_FIELDS.includes(key as any) && value) {
       return formatDate(value);
     }
     return value;
-  };
+  }, [formatDate]);
 
-  const filteredData = data.filter((row) => {
-    if (!searchQuery) return true;
-    const name = String(row.name || '').toLowerCase();
-    return name.includes(searchQuery.toLowerCase());
-  });
+  const filteredData = React.useMemo(() => {
+    return localData.filter((row) => {
+      if (!searchQuery) return true;
+      const name = String(row.name || '').toLowerCase();
+      return name.includes(searchQuery.toLowerCase());
+    });
+  }, [localData, searchQuery]);
+
+  const handleCellClick = React.useCallback((column: Column, row: any) => {
+    if (TIMESTAMP_FIELDS.includes(column.key as any)) return;
+    setEditingCell({
+      id: row.id,
+      key: column.key,
+      value: row[column.key],
+    });
+  }, []);
 
   return (
     <div className="w-full">
@@ -122,9 +210,33 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className="px-6 py-4 text-sm whitespace-nowrap"
+                      className={`px-6 py-4 text-sm whitespace-nowrap cursor-pointer hover:bg-[#3f3f3f] transition-colors`}
+                      onClick={() => handleCellClick(column, row)}
                     >
-                      {formatCellValue(row[column.key], column.key)}
+                      {editingCell?.id === row.id && editingCell?.key === column.key ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          className="bg-[#2f2f2f] text-white px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={editingCell.value || ''}
+                          onChange={(e) =>
+                            setEditingCell({
+                              ...editingCell,
+                              value: e.target.value,
+                            })
+                          }
+                          onBlur={() => handleInputBlur(row)}
+                          onKeyDown={(e) => handleInputKeyDown(e, row)}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {formatCellValue(row[column.key], column.key)}
+                          <FiEdit2 
+                            size={14} 
+                            className="opacity-0 group-hover:opacity-50 hover:opacity-100 text-gray-400"
+                          />
+                        </div>
+                      )}
                     </td>
                   ))}
                   <td className="px-6 py-4 text-sm whitespace-nowrap">
@@ -180,4 +292,4 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   );
 };
 
-export default DataTable; 
+export default React.memo(DataTable); 

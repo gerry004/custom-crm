@@ -20,4 +20,36 @@ export async function DELETE(
       { status: 500 }
     );
   }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const data = await request.json();
+    const id = parseInt(params.id);
+
+    // Handle date fields
+    if (data.lastContact) {
+      data.lastContact = new Date(data.lastContact);
+    }
+
+    const customer = await prisma.customer.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json(customer);
+  } catch (error) {
+    console.error('Error updating customer:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json(
+      { 
+        error: 'Failed to update customer',
+        details: errorMessage 
+      },
+      { status: 500 }
+    );
+  }
 } 
