@@ -14,6 +14,30 @@ interface Column {
   label: string;
 }
 
+const STATUS_COLORS = {
+  'To Do': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
+  'In Progress': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
+  'Done': 'bg-green-500/20 text-green-500 border-green-500/50',
+} as const;
+
+const TASK_STATUSES = ['To Do', 'In Progress', 'Done'] as const;
+
+const PRIORITY_COLORS = {
+  'Low': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
+  'Medium': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
+  'High': 'bg-red-500/20 text-red-500 border-red-500/50',
+} as const;
+
+const TASK_PRIORITIES = ['Low', 'Medium', 'High'] as const;
+
+const CUSTOMER_STATUS_COLORS = {
+  'Active': 'bg-green-500/20 text-green-500 border-green-500/50',
+  'Inactive': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
+  'Pending': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
+} as const;
+
+const CUSTOMER_STATUSES = ['Active', 'Inactive', 'Pending'] as const;
+
 const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateEntryModalProps) => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +58,9 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
     const keyLower = key.toLowerCase();
     if (keyLower.includes('email')) return 'email';
     if (keyLower.includes('phone')) return 'tel';
-    if (keyLower === 'lastcontact' || keyLower.includes('date')) return 'datetime-local';
+    if (keyLower === 'lastcontact' || keyLower.includes('date')) return 'date';
+    if (keyLower === 'status' && (type === 'tasks' || type === 'customers')) return 'select';
+    if (keyLower === 'priority' && type === 'tasks') return 'select';
     return 'text';
   };
 
@@ -42,18 +68,18 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
     if (!value) return '';
     try {
       const date = new Date(value);
-      // Format: YYYY-MM-DDThh:mm
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      // Format: YYYY-MM-DD
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     } catch {
       return '';
     }
   };
 
   const handleInputChange = (key: string, value: string) => {
-    // For date fields, ensure we store as ISO string
     const keyLower = key.toLowerCase();
     if (keyLower === 'lastcontact' || keyLower.includes('date')) {
-      const dateValue = value ? new Date(value).toISOString() : '';
+      // Set the time to midnight UTC to store only the date
+      const dateValue = value ? new Date(value + 'T00:00:00.000Z').toISOString() : '';
       setFormData(prev => ({
         ...prev,
         [key]: dateValue
@@ -72,12 +98,15 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
     setError(null);
 
     try {
-      // Add current timestamp for createdAt and updatedAt
-      const now = new Date().toISOString();
+      // Add current date (without time) for createdAt and updatedAt
+      const now = new Date();
+      now.setUTCHours(0, 0, 0, 0);
+      const nowISOString = now.toISOString();
+      
       const dataToSubmit = {
         ...formData,
-        createdAt: now,
-        updatedAt: now
+        createdAt: nowISOString,
+        updatedAt: nowISOString
       };
 
       const response = await fetch(`/api/${type}`, {
@@ -138,12 +167,43 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     {column.label}
                   </label>
-                  <input
-                    type={inputType}
-                    value={value}
-                    onChange={(e) => handleInputChange(column.key, e.target.value)}
-                    className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
-                  />
+                  {inputType === 'select' ? (
+                    <select
+                      value={value}
+                      onChange={(e) => handleInputChange(column.key, e.target.value)}
+                      className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+                    >
+                      <option value="">Select {column.label}</option>
+                      {type === 'tasks' ? (
+                        column.key === 'status' ? (
+                          TASK_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))
+                        ) : (
+                          TASK_PRIORITIES.map((priority) => (
+                            <option key={priority} value={priority}>
+                              {priority}
+                            </option>
+                          ))
+                        )
+                      ) : (
+                        CUSTOMER_STATUSES.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type={inputType}
+                      value={value}
+                      onChange={(e) => handleInputChange(column.key, e.target.value)}
+                      className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+                    />
+                  )}
                 </div>
               );
             })}

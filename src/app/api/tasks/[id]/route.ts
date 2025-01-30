@@ -32,7 +32,15 @@ export async function PATCH(
 
     // Handle date fields
     if (data.dueDate) {
-      data.dueDate = new Date(data.dueDate);
+      const date = new Date(data.dueDate);
+      date.setUTCHours(0, 0, 0, 0);
+      data.dueDate = date;
+    }
+
+    if (data.updatedAt) {
+      const date = new Date(data.updatedAt);
+      date.setUTCHours(0, 0, 0, 0);
+      data.updatedAt = date;
     }
 
     const task = await prisma.task.update({

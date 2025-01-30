@@ -36,7 +36,7 @@ model Customer {
 model Task {
   id        Int      @id @default(autoincrement())
   title     String
-  status    String
+  status    String   @default("To Do")
   dueDate   DateTime @map("due_date")
   priority  String
   createdAt DateTime @default(now()) @map("created_at")

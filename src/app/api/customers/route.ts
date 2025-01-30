@@ -34,13 +34,19 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     
+    // Set default values if not provided
+    const customerData = {
+      ...data,
+      status: data.status || 'Pending',
+    };
+
     // Convert lastContact to Date if it exists
-    if (data.lastContact) {
-      data.lastContact = new Date(data.lastContact);
+    if (customerData.lastContact) {
+      customerData.lastContact = new Date(customerData.lastContact);
     }
 
     const customer = await prisma.customer.create({
-      data: data
+      data: customerData
     });
     
     return NextResponse.json(customer);

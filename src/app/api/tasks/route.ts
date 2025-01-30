@@ -38,15 +38,29 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     
-    // Ensure dueDate is properly formatted as a Date
+    // Ensure dates are set to midnight UTC
     if (data.dueDate) {
-      data.dueDate = new Date(data.dueDate);
+      const date = new Date(data.dueDate);
+      date.setUTCHours(0, 0, 0, 0);
+      data.dueDate = date;
+    }
+    
+    if (data.createdAt) {
+      const date = new Date(data.createdAt);
+      date.setUTCHours(0, 0, 0, 0);
+      data.createdAt = date;
+    }
+    
+    if (data.updatedAt) {
+      const date = new Date(data.updatedAt);
+      date.setUTCHours(0, 0, 0, 0);
+      data.updatedAt = date;
     }
 
     // Set default values if not provided
     const taskData = {
       ...data,
-      status: data.status || 'Pending',
+      status: data.status || 'To Do',
       priority: data.priority || 'Medium',
     };
 
