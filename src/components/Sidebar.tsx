@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { FiUsers, FiUserPlus } from 'react-icons/fi';
+import { FiUsers, FiUserPlus, FiCheckSquare } from 'react-icons/fi';
 
 const Sidebar = () => {
   return (
@@ -24,6 +24,14 @@ const Sidebar = () => {
         >
           <FiUserPlus className="text-lg" />
           <span>Leads</span>
+        </Link>
+
+        <Link 
+          href="/tasks" 
+          className="flex items-center gap-2 p-2 hover:bg-[#2f2f2f] rounded-md"
+        >
+          <FiCheckSquare className="text-lg" />
+          <span>Tasks</span>
         </Link>
       </div>
     </div>

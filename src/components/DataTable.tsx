@@ -12,13 +12,13 @@ interface Column {
 interface DataTableProps {
   columns: Column[];
   data: any[];
-  type: 'customers' | 'leads';
+  type: 'customers' | 'leads' | 'tasks';
   onRefresh?: () => void;
 }
 
 // Move these outside component to avoid recreating on each render
 const TIMESTAMP_FIELDS = ['createdAt', 'updatedAt'] as const;
-const DATE_FORMAT_FIELDS = ['lastContact', 'createdAt', 'updatedAt'] as const;
+const DATE_FORMAT_FIELDS = ['lastContact', 'createdAt', 'updatedAt', 'dueDate'] as const;
 
 const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -30,6 +30,7 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
     value: any;
   } | null>(null);
   const [localData, setLocalData] = React.useState(data);
+  const [draggedItem, setDraggedItem] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     setLocalData(data);
@@ -153,6 +154,41 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
     });
   }, []);
 
+  const handleReorder = async (fromId: number, toId: number) => {
+    if (fromId === toId) return;
+
+    try {
+      const response = await fetch(`/api/${type}/reorder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fromId, toId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reorder items');
+      }
+
+      // Update local state to reflect the new order
+      setLocalData(prevData => {
+        const newData = [...prevData];
+        const fromIndex = newData.findIndex(item => item.id === fromId);
+        const toIndex = newData.findIndex(item => item.id === toId);
+        
+        const [movedItem] = newData.splice(fromIndex, 1);
+        newData.splice(toIndex, 0, movedItem);
+        
+        return newData;
+      });
+
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error reordering items:', error);
+      alert('Failed to reorder items');
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
@@ -204,8 +240,31 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
             {filteredData.length > 0 ? (
               filteredData.map((row, index) => (
                 <tr
-                  key={index}
-                  className="text-gray-300 hover:bg-[#2f2f2f]"
+                  key={row.id}
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggedItem(row.id);
+                    e.currentTarget.classList.add('opacity-50');
+                  }}
+                  onDragEnd={(e) => {
+                    setDraggedItem(null);
+                    e.currentTarget.classList.remove('opacity-50');
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('bg-[#3f3f3f]');
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('bg-[#3f3f3f]');
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('bg-[#3f3f3f]');
+                    if (draggedItem !== null && draggedItem !== row.id) {
+                      handleReorder(draggedItem, row.id);
+                    }
+                  }}
+                  className="text-gray-300 hover:bg-[#2f2f2f] transition-colors"
                 >
                   {columns.map((column) => (
                     <td
@@ -240,16 +299,24 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
                     </td>
                   ))}
                   <td className="px-6 py-4 text-sm whitespace-nowrap">
-                    <button
-                      onClick={() => handleDelete(row.id)}
-                      disabled={isDeleting === row.id}
-                      className={`text-gray-400 hover:text-red-500 transition-colors ${
-                        isDeleting === row.id ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      title="Delete"
-                    >
-                      <FiTrash2 size={18} />
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="text-gray-400 hover:text-gray-300 transition-colors cursor-move"
+                        title="Move"
+                      >
+                        <FiMove size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(row.id)}
+                        disabled={isDeleting === row.id}
+                        className={`text-gray-400 hover:text-red-500 transition-colors ${
+                          isDeleting === row.id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        title="Delete"
+                      >
+                        <FiTrash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

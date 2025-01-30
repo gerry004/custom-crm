@@ -4,7 +4,7 @@ import { FiX } from 'react-icons/fi';
 interface CreateEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'customers' | 'leads';
+  type: 'customers' | 'leads' | 'tasks';
   columns: Column[];
   onSuccess?: () => void;
 }
