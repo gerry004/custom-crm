@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { FiUsers, FiUserPlus, FiCheckSquare } from 'react-icons/fi';
+import { FiUsers, FiUserPlus, FiCheckSquare, FiUserCheck } from 'react-icons/fi';
 
 const Sidebar = () => {
   return (
@@ -32,6 +32,14 @@ const Sidebar = () => {
         >
           <FiCheckSquare className="text-lg" />
           <span>Tasks</span>
+        </Link>
+
+        <Link 
+          href="/team-members" 
+          className="flex items-center gap-2 p-2 hover:bg-[#2f2f2f] rounded-md"
+        >
+          <FiUserCheck className="text-lg" />
+          <span>Team Members</span>
         </Link>
       </div>
     </div>

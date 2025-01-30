@@ -12,7 +12,7 @@ interface Column {
 interface DataTableProps {
   columns: Column[];
   data: any[];
-  type: 'customers' | 'leads' | 'tasks';
+  type: 'customers' | 'leads' | 'tasks' | 'team-members';
   onRefresh?: () => void;
 }
 
