@@ -1,19 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
-
-const leadsData = [
-  {
-    name: 'Jane Smith',
-    company: 'Tech Corp',
-    email: 'jane@techcorp.com',
-    source: 'Website',
-    status: 'New',
-  },
-  // Add more sample data as needed
-];
 
 const columns = [
   { key: 'name', label: 'Name' },
@@ -24,11 +13,35 @@ const columns = [
 ];
 
 export default function LeadsPage() {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const response = await fetch('/api/leads');
+        if (!response.ok) throw new Error('Failed to fetch leads');
+        const data = await response.json();
+        setLeads(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch leads');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+  }, []);
+
+  if (loading) return <Layout>Loading...</Layout>;
+  if (error) return <Layout>Error: {error}</Layout>;
+
   return (
     <Layout>
       <DataTable
         columns={columns}
-        data={leadsData}
+        data={leads}
         type="leads"
       />
     </Layout>

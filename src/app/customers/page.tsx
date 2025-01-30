@@ -1,19 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
-
-const customersData = [
-  {
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1 234 567 890',
-    status: 'Active',
-    lastContact: '2024-01-20',
-  },
-  // Add more sample data as needed
-];
 
 const columns = [
   { key: 'name', label: 'Name' },
@@ -24,11 +13,35 @@ const columns = [
 ];
 
 export default function CustomersPage() {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const response = await fetch('/api/customers');
+        if (!response.ok) throw new Error('Failed to fetch customers');
+        const data = await response.json();
+        setCustomers(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch customers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  if (loading) return <Layout>Loading...</Layout>;
+  if (error) return <Layout>Error: {error}</Layout>;
+
   return (
     <Layout>
       <DataTable
         columns={columns}
-        data={customersData}
+        data={customers}
         type="customers"
       />
     </Layout>

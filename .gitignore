@@ -39,6 +39,10 @@ Thumbs.db
 # Testing
 /coverage
 
+# Prisma
+prisma/migrations
+prisma/seed.ts
+
 # Misc
 .cache
 .temp
