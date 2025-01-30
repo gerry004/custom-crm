@@ -4,38 +4,58 @@ import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
 
-const columns = [
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'status', label: 'Status' },
-  { key: 'lastContact', label: 'Last Contact' },
-];
-
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
+  const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCustomers = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/customers');
-        if (!response.ok) throw new Error('Failed to fetch customers');
-        const data = await response.json();
-        setCustomers(data);
+        // Fetch both columns and data
+        const [columnsResponse, customersResponse] = await Promise.all([
+          fetch('/api/customers/columns'),
+          fetch('/api/customers')
+        ]);
+
+        if (!columnsResponse.ok) throw new Error('Failed to fetch columns');
+        if (!customersResponse.ok) throw new Error('Failed to fetch customers');
+
+        const columnsData = await columnsResponse.json();
+        const customersData = await customersResponse.json();
+
+        // Transform column data into required format
+        const formattedColumns = columnsData.map((column: string) => ({
+          key: column
+            .toLowerCase()
+            .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase()),
+          label: column
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ')
+        }));
+
+        setColumns(formattedColumns);
+        setCustomers(customersData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch customers');
+        console.error('Error in fetchData:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCustomers();
+    fetchData();
   }, []);
 
-  if (loading) return <Layout>Loading...</Layout>;
-  if (error) return <Layout>Error: {error}</Layout>;
+  if (loading) {
+    return <Layout>Loading...</Layout>;
+  }
+  
+  if (error) {
+    return <Layout>Error: {error}</Layout>;
+  }
 
   return (
     <Layout>

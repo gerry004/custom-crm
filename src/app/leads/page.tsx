@@ -4,34 +4,49 @@ import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
 
-const columns = [
-  { key: 'name', label: 'Name' },
-  { key: 'company', label: 'Company' },
-  { key: 'email', label: 'Email' },
-  { key: 'source', label: 'Source' },
-  { key: 'status', label: 'Status' },
-];
-
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
+  const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchLeads = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/leads');
-        if (!response.ok) throw new Error('Failed to fetch leads');
-        const data = await response.json();
-        setLeads(data);
+        // Fetch both columns and data
+        const [columnsResponse, leadsResponse] = await Promise.all([
+          fetch('/api/leads/columns'),
+          fetch('/api/leads')
+        ]);
+
+        if (!columnsResponse.ok) throw new Error('Failed to fetch columns');
+        if (!leadsResponse.ok) throw new Error('Failed to fetch leads');
+
+        const columnsData = await columnsResponse.json();
+        const leadsData = await leadsResponse.json();
+
+        // Transform column data into required format
+        const formattedColumns = columnsData.map((column: string) => ({
+          key: column
+            .toLowerCase()
+            .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase()),
+          label: column
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ')
+        }));
+
+        setColumns(formattedColumns);
+        setLeads(leadsData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch leads');
+        console.error('Error in fetchData:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLeads();
+    fetchData();
   }, []);
 
   if (loading) return <Layout>Loading...</Layout>;

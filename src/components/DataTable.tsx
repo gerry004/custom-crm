@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiSearch } from 'react-icons/fi';
+import CreateEntryModal from './CreateEntryModal';
 
 interface Column {
   key: string;
@@ -13,6 +14,23 @@ interface DataTableProps {
 }
 
 const DataTable = ({ columns, data, type }: DataTableProps) => {
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} ${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  const formatCellValue = (value: any, key: string) => {
+    if (value === null || value === undefined) return '';
+    
+    // Check if the field is a date field
+    if (['lastContact', 'createdAt', 'updatedAt'].includes(key) && value) {
+      return formatDate(value);
+    }
+    return value;
+  };
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
@@ -32,7 +50,10 @@ const DataTable = ({ columns, data, type }: DataTableProps) => {
               className="pl-10 pr-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500"
             />
           </div>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+          <button 
+            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+            onClick={() => setIsModalOpen(true)}
+          >
             New {type.slice(0, -1)}
           </button>
         </div>
@@ -63,7 +84,7 @@ const DataTable = ({ columns, data, type }: DataTableProps) => {
                     key={column.key}
                     className="px-6 py-4 text-sm whitespace-nowrap"
                   >
-                    {row[column.key]}
+                    {formatCellValue(row[column.key], column.key)}
                   </td>
                 ))}
               </tr>
@@ -71,6 +92,12 @@ const DataTable = ({ columns, data, type }: DataTableProps) => {
           </tbody>
         </table>
       </div>
+
+      <CreateEntryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        type={type}
+      />
     </div>
   );
 };
