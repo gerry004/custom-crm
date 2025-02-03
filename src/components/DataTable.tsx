@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiSearch, FiTrash2, FiMove, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 import { searchObjects } from '@/utils/searchUtils';
@@ -118,16 +118,16 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [editingCell, setEditingCell] = React.useState<{
-    id: number;
-    key: string;
-    value: any;
-  } | null>(null);
   const [localData, setLocalData] = React.useState(data);
   const [draggedItem, setDraggedItem] = React.useState<number | null>(null);
   const [sortConfig, setSortConfig] = React.useState<SortItem[]>([]);
   const [showSortConfig, setShowSortConfig] = React.useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
+  const [editingCell, setEditingCell] = React.useState<{
+    id: number;
+    key: string;
+    value: any;
+  } | null>(null);
 
   // Define default searchable fields based on type
   const defaultSearchFields = React.useMemo(() => {
@@ -193,7 +193,8 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     return sortData(searchResults, sortConfig);
   }, [localData, searchQuery, searchableFields, defaultSearchFields, sortConfig, sortData]);
 
-  React.useEffect(() => {
+  // Update localData when props data changes
+  useEffect(() => {
     setLocalData(data);
   }, [data]);
 
@@ -223,43 +224,6 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     }
   };
 
-  const handleCellEdit = async (id: number, key: string, newValue: any) => {
-    try {
-      const response = await fetch(`/api/${type}/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ [key]: newValue }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update entry');
-      }
-
-      const updatedEntry = await response.json();
-      
-      setLocalData(prevData => 
-        prevData.map(item => item.id === id ? updatedEntry : item)
-      );
-    } catch (error) {
-      console.error('Error updating entry:', error);
-      alert('Failed to update entry');
-    } finally {
-      setEditingCell(null);
-    }
-  };
-
-  const handleInputBlur = React.useCallback((row: any) => {
-    if (!editingCell) return;
-    
-    if (editingCell.value !== row[editingCell.key]) {
-      handleCellEdit(row.id, editingCell.key, editingCell.value);
-    } else {
-      setEditingCell(null);
-    }
-  }, [editingCell]);
-
   const handleCellClick = React.useCallback((column: ColumnFormat, row: any) => {
     const { fieldConfig } = column;
     
@@ -269,9 +233,55 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     setEditingCell({
       id: row.id,
       key: column.key,
-      value: row[column.key],
+      value: row[column.key] || ''
     });
   }, []);
+
+  const handleCellChange = React.useCallback((value: any) => {
+    if (!editingCell) return;
+
+    // Update the editing cell value
+    setEditingCell(prev => prev ? { ...prev, value } : null);
+
+    // Immediately update the local data for real-time feedback
+    setLocalData(prevData => 
+      prevData.map(item => 
+        item.id === editingCell.id 
+          ? { ...item, [editingCell.key]: value }
+          : item
+      )
+    );
+  }, [editingCell]);
+
+  const handleCellBlur = React.useCallback(async (row: any) => {
+    if (!editingCell) return;
+    
+    try {
+      const response = await fetch(`/api/${type}/${row.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [editingCell.key]: editingCell.value }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update entry');
+        // Optionally revert the local change if the API call fails
+        // setLocalData(data);
+      }
+
+      const updatedEntry = await response.json();
+      setLocalData(prevData => 
+        prevData.map(item => item.id === row.id ? updatedEntry : item)
+      );
+    } catch (error) {
+      console.error('Error updating entry:', error);
+      alert('Failed to update entry');
+    } finally {
+      setEditingCell(null);
+    }
+  }, [editingCell, type]);
 
   const handleReorder = async (fromId: number, toId: number) => {
     if (fromId === toId) return;
@@ -479,10 +489,8 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                         column={column}
                         value={row[column.key]}
                         isEditing={editingCell?.id === row.id && editingCell?.key === column.key}
-                        onChange={(value) => 
-                          setEditingCell(curr => curr ? { ...curr, value } : null)
-                        }
-                        onBlur={() => handleInputBlur(row)}
+                        onChange={handleCellChange}
+                        onBlur={() => handleCellBlur(row)}
                       />
                     </td>
                   ))}
