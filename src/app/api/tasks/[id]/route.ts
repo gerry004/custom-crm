@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const id = parseInt(params.id);
+    
+    // Verify the task belongs to the user
+    const task = await prisma.task.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!task || task.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     
     await prisma.task.delete({
       where: { id },
@@ -27,28 +43,35 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const data = await request.json();
     const id = parseInt(params.id);
 
+    // Verify the task belongs to the user
+    const task = await prisma.task.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!task || task.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
     // Handle date fields
     if (data.dueDate) {
-      const date = new Date(data.dueDate);
-      date.setUTCHours(0, 0, 0, 0);
-      data.dueDate = date;
+      data.dueDate = new Date(data.dueDate);
     }
 
-    if (data.updatedAt) {
-      const date = new Date(data.updatedAt);
-      date.setUTCHours(0, 0, 0, 0);
-      data.updatedAt = date;
-    }
-
-    const task = await prisma.task.update({
+    const updatedTask = await prisma.task.update({
       where: { id },
       data,
     });
 
-    return NextResponse.json(task);
+    return NextResponse.json(updatedTask);
   } catch (error) {
     console.error('Error updating task:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

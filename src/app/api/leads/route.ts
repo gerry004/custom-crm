@@ -1,24 +1,27 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Test database connection first
-    await prisma.$connect();
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     
     const leads = await prisma.lead.findMany({
+      where: {
+        userId: user.id // Only fetch leads for the current user
+      },
       orderBy: {
         createdAt: 'desc',
       },
     });
     
-    // If we get no leads, return an empty array but with 200 status
     return NextResponse.json(leads || []);
     
   } catch (error) {
     console.error('Error fetching leads:', error);
-    
-    // More detailed error response
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { 
@@ -28,20 +31,22 @@ export async function GET() {
       },
       { status: 500 }
     );
-  } finally {
-    // Always disconnect after the operation
-    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const data = await request.json();
     
-    // Set default values if not provided
     const leadData = {
       ...data,
       status: data.status || 'New',
+      userId: user.id // Associate the lead with the current user
     };
 
     const lead = await prisma.lead.create({

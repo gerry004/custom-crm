@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    await prisma.$connect();
-    
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const customers = await prisma.customer.findMany({
+      where: {
+        userId: user.id // Only fetch customers for the current user
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -14,8 +21,7 @@ export async function GET() {
     return NextResponse.json(customers || []);
     
   } catch (error) {
-    console.error('Error details:', error);
-    
+    console.error('Error fetching customers:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { 
@@ -25,25 +31,23 @@ export async function GET() {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const data = await request.json();
     
-    // Set default values if not provided
     const customerData = {
       ...data,
       status: data.status || 'Pending',
+      userId: user.id // Associate the customer with the current user
     };
-
-    // Convert lastContact to Date if it exists
-    if (customerData.lastContact) {
-      customerData.lastContact = new Date(customerData.lastContact);
-    }
 
     const customer = await prisma.customer.create({
       data: customerData

@@ -10,12 +10,13 @@ datasource db {
 model Lead {
   id        Int      @id @default(autoincrement())
   name      String
-  company   String
-  email     String
-  source    String
-  status    String
+  email     String?
+  phone     String?
+  status    String   @default("New")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
 
   @@map("leads")
 }
@@ -23,24 +24,29 @@ model Lead {
 model Customer {
   id          Int      @id @default(autoincrement())
   name        String
-  email       String
-  phone       String
-  status      String
-  lastContact DateTime @map("last_contact")
+  email       String?
+  phone       String?
+  status      String   @default("Pending")
+  lastContact DateTime?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
 
   @@map("customers")
 }
 
 model Task {
-  id        Int      @id @default(autoincrement())
-  title     String
-  status    String   @default("To Do")
-  dueDate   DateTime @map("due_date")
-  priority  String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("To Do")
+  priority    String   @default("Medium")
+  dueDate     DateTime?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
 
   @@map("tasks")
 }
@@ -62,6 +68,9 @@ model User {
   password  String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  customers Customer[]
+  leads     Lead[]
+  tasks     Task[]
 
   @@map("users")
 } 
