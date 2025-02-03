@@ -6,7 +6,7 @@ import { isDateField, formatDateForInput } from '@/utils/dateFormatter';
 interface CreateEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'customers' | 'leads' | 'tasks' | 'team-members';
+  type: 'customers' | 'leads' | 'tasks' | 'finances';
   columns: Column[];
   onSuccess?: () => void;
 }

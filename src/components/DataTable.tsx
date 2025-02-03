@@ -1,18 +1,19 @@
 'use client';
 
 import React from 'react';
-import { FiSearch, FiTrash2, FiMove, FiEdit2, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove, FiEdit2, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 import StatusDropdown, {
   STATUS_COLORS,
 } from './StatusDropdown';
 import { ColumnFormat, toDbColumn, formatCellValue } from '@/utils/columnTransformers';
 import { searchObjects } from '@/utils/searchUtils';
+import CSVImportModal from './CSVImportModal';
 
 interface DataTableProps {
   columns: ColumnFormat[];
   data: any[];
-  type: 'customers' | 'leads' | 'tasks';
+  type: 'customers' | 'leads' | 'tasks' | 'finances';
   onRefresh?: () => void;
   searchableFields?: string[];
 }
@@ -147,6 +148,7 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
   const [draggedItem, setDraggedItem] = React.useState<number | null>(null);
   const [sortConfig, setSortConfig] = React.useState<SortItem[]>([]);
   const [showSortConfig, setShowSortConfig] = React.useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
 
   // Define default searchable fields based on type
   const defaultSearchFields = React.useMemo(() => {
@@ -156,6 +158,8 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
       case 'leads':
       case 'customers':
         return ['name', 'email', 'phone', 'status'];
+      case 'finances':
+        return ['description', 'type', 'tag', 'amount'];
       default:
         return ['name', 'title'];
     }
@@ -422,6 +426,30 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     });
   };
 
+  const handleImportData = async (mappedData: any[]) => {
+    try {
+      const response = await fetch(`/api/${type}/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: mappedData }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to import ${type}`);
+      }
+
+      const result = await response.json();
+      setLocalData(prev => [...prev, ...result]);
+      onRefresh?.();
+    } catch (error) {
+      console.error(`Error importing ${type}:`, error);
+      throw error; // Re-throw to be handled by the CSVImportModal
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
@@ -453,6 +481,13 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
             title="Toggle sort configuration"
           >
             <FiFilter size={18} />
+          </button>
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600"
+            title="Import from CSV"
+          >
+            <FiUpload size={18} />
           </button>
           <button 
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
@@ -658,6 +693,14 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
         type={type}
         columns={columns}
         onSuccess={onRefresh}
+      />
+
+      <CSVImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        columns={columns}
+        onImport={handleImportData}
+        type={type}
       />
     </div>
   );
