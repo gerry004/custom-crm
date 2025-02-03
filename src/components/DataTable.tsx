@@ -12,16 +12,13 @@ import { searchObjects } from '@/utils/searchUtils';
 interface DataTableProps {
   columns: ColumnFormat[];
   data: any[];
-  type: 'customers' | 'leads' | 'tasks' | 'team-members';
+  type: 'customers' | 'leads' | 'tasks';
   onRefresh?: () => void;
   searchableFields?: string[];
 }
 
-// Move these outside component to avoid recreating on each render
 const TIMESTAMP_FIELDS = ['createdAt', 'updatedAt'] as const;
 const DATE_FORMAT_FIELDS = ['lastContact', 'createdAt', 'updatedAt', 'dueDate'] as const;
-
-const TASK_STATUSES = ['To Do', 'In Progress', 'Done'] as const;
 
 const PRIORITY_COLORS = {
   'Low': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
@@ -29,15 +26,11 @@ const PRIORITY_COLORS = {
   'High': 'bg-red-500/20 text-red-500 border-red-500/50',
 } as const;
 
-const TASK_PRIORITIES = ['Low', 'Medium', 'High'] as const;
-
 const CUSTOMER_STATUS_COLORS = {
   'Active': 'bg-green-500/20 text-green-500 border-green-500/50',
   'Inactive': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
   'Pending': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
 } as const;
-
-const CUSTOMER_STATUSES = ['Active', 'Inactive', 'Pending'] as const;
 
 const LEAD_STATUS_COLORS = {
   'New': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
@@ -45,8 +38,6 @@ const LEAD_STATUS_COLORS = {
   'Qualified': 'bg-green-500/20 text-green-500 border-green-500/50',
   'Lost': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
 } as const;
-
-const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'] as const;
 
 interface SortItem {
   key: string;
@@ -165,8 +156,6 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
       case 'leads':
       case 'customers':
         return ['name', 'email', 'phone', 'status'];
-      case 'team-members':
-        return ['name', 'email'];
       default:
         return ['name', 'title'];
     }

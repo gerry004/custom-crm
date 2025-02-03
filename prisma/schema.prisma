@@ -51,16 +51,6 @@ model Task {
   @@map("tasks")
 }
 
-model TeamMember {
-  id        Int      @id @default(autoincrement())
-  name      String   @map("name")
-  email     String   @unique @map("email")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("team_members")
-}
-
 model User {
   id        Int      @id @default(autoincrement())
   name      String   @map("name")
@@ -71,6 +61,20 @@ model User {
   customers Customer[]
   leads     Lead[]
   tasks     Task[]
+  finances  Finance[]
 
   @@map("users")
+}
+
+model Finance {
+  id          String   @id @default(cuid())
+  description String   @map("description")
+  amount      Float    @map("amount")
+  type        String?   @map("type")
+  tag         String?   @map("tag")
+  date        DateTime @default(now()) @map("date")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  userId      Int      @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
 } 
