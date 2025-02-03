@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -34,9 +34,11 @@ export async function GET() {
     `;
 
     const columnNames = columns.map(col => col.column_name);
+    console.log('API returning columns:', columnNames); // Debug log
     
     return NextResponse.json(columnNames);
   } catch (error) {
+    console.error('Error fetching columns:', error);
     return NextResponse.json(
       { error: 'Failed to fetch columns' },
       { status: 500 }

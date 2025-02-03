@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
+import { ColumnFormat } from '@/types/fieldTypes';
+import { formatColumns } from '@/utils/columnTransformers';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
-  const [columns, setColumns] = useState([]);
+  const [columns, setColumns] = useState<ColumnFormat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,16 +26,10 @@ export default function CustomersPage() {
       const columnsData = await columnsResponse.json();
       const customersData = await customersResponse.json();
 
-
-      const formattedColumns = columnsData.map((column: string) => ({
-        key: column
-          .toLowerCase()
-          .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase()),
-        label: column
-          .split('_')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ')
-      }));
+      console.log('Raw columns data:', columnsData); // Debug log
+      
+      const formattedColumns = formatColumns(columnsData);
+      console.log('Formatted columns:', formattedColumns); // Debug log
 
       setColumns(formattedColumns);
       setCustomers(customersData);

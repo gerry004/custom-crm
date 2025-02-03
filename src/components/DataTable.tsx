@@ -3,12 +3,14 @@
 import React from 'react';
 import { FiSearch, FiTrash2, FiMove, FiEdit2, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
-import StatusDropdown, {
+import {
   STATUS_COLORS,
 } from './StatusDropdown';
-import { ColumnFormat, toDbColumn, formatCellValue } from '@/utils/columnTransformers';
+import { toDbColumn, formatCellValue } from '@/utils/columnTransformers';
 import { searchObjects } from '@/utils/searchUtils';
 import CSVImportModal from './CSVImportModal';
+import { DataTableField } from './DataTableField';
+import { ColumnFormat } from '@/types/fieldTypes';
 
 interface DataTableProps {
   columns: ColumnFormat[];
@@ -571,70 +573,22 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                     <td
                       key={column.key}
                       className={`px-6 py-4 text-sm whitespace-nowrap cursor-pointer hover:bg-[#3f3f3f] transition-colors relative ${
-                        column.key === 'status' || 
-                        column.key === 'priority' || 
-                        DATE_FORMAT_FIELDS.includes(column.key as any)
+                        column.fieldConfig.type === 'option' || 
+                        column.fieldConfig.type === 'date'
                           ? 'text-center'
                           : ''
                       }`}
                       onClick={() => handleCellClick(column, row)}
                     >
-                      {editingCell?.id === row.id && editingCell?.key === column.key ? (
-                        ((type === 'tasks' && (column.key === 'status' || column.key === 'priority')) ||
-                         (type === 'customers' && column.key === 'status') ||
-                         (type === 'leads' && column.key === 'status')) ? (
-                          <div className="flex justify-center">
-                            <StatusDropdown
-                              type={
-                                type === 'tasks'
-                                  ? column.key === 'status'
-                                    ? 'task-status'
-                                    : 'task-priority'
-                                  : type === 'customers'
-                                  ? 'customer-status'
-                                  : 'lead-status'
-                              }
-                              value={editingCell.value}
-                              onChange={(value) => handleCellEdit(row.id, column.key, value)}
-                              onBlur={() => setEditingCell(null)}
-                              autoFocus
-                            />
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            autoFocus
-                            className="bg-[#2f2f2f] text-white px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={editingCell.value || ''}
-                            onChange={(e) =>
-                              setEditingCell({
-                                ...editingCell,
-                                value: e.target.value,
-                              })
-                            }
-                            onBlur={() => handleInputBlur(row)}
-                            onKeyDown={(e) => handleInputKeyDown(e, row)}
-                          />
-                        )
-                      ) : (
-                        <>
-                          <div className={`flex items-center ${
-                            column.key === 'status' || 
-                            column.key === 'priority' || 
-                            DATE_FORMAT_FIELDS.includes(column.key as any)
-                              ? 'justify-center'
-                              : ''
-                          }`}>
-                            {formatCellDisplay(row[column.key], column.key)}
-                          </div>
-                          <div className="absolute top-2 right-2">
-                            <FiEdit2 
-                              size={14} 
-                              className="opacity-0 group-hover:opacity-50 hover:opacity-100 text-gray-400"
-                            />
-                          </div>
-                        </>
-                      )}
+                      <DataTableField
+                        column={column}
+                        value={row[column.key]}
+                        isEditing={editingCell?.id === row.id && editingCell?.key === column.key}
+                        onChange={(value) => 
+                          setEditingCell(curr => curr ? { ...curr, value } : null)
+                        }
+                        onBlur={() => handleInputBlur(row)}
+                      />
                     </td>
                   ))}
                   <td className="px-6 py-4 text-sm whitespace-nowrap">

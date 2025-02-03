@@ -2,18 +2,14 @@ import React, { useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import StatusDropdown from './StatusDropdown';
 import { isDateField, formatDateForInput } from '@/utils/dateFormatter';
+import { ColumnFormat } from '@/types/fieldTypes';
 
 interface CreateEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: 'customers' | 'leads' | 'tasks' | 'finances';
-  columns: Column[];
+  columns: ColumnFormat[];
   onSuccess?: () => void;
-}
-
-interface Column {
-  key: string;
-  label: string;
 }
 
 const STATUS_COLORS = {
@@ -72,60 +68,82 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
            !key.includes('updated_at');
   });
 
-  const renderInput = (column: Column) => {
+  const renderInput = (column: ColumnFormat) => {
     const value = formData[column.key] || '';
+    const { fieldConfig } = column;
 
-    if (column.key === 'status') {
-      return (
-        <StatusDropdown
-          type={
-            type === 'tasks'
-              ? 'task-status'
-              : type === 'customers'
-              ? 'customer-status'
-              : 'lead-status'
-          }
-          value={value}
-          onChange={(value) => handleInputChange(column.key, value)}
-        />
-      );
+    switch (fieldConfig.type) {
+      case 'option':
+        return (
+          <StatusDropdown
+            options={fieldConfig.options || []}
+            value={value}
+            onChange={(value) => handleInputChange(column.key, value)}
+          />
+        );
+
+      case 'date':
+        return (
+          <input
+            type="date"
+            id={column.key}
+            name={column.key}
+            value={formatDateForInput(value)}
+            onChange={(e) => handleInputChange(column.key, e.target.value)}
+            className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+          />
+        );
+
+      case 'email':
+        return (
+          <input
+            type="email"
+            id={column.key}
+            name={column.key}
+            value={value}
+            onChange={(e) => handleInputChange(column.key, e.target.value)}
+            className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+          />
+        );
+
+      case 'number':
+      case 'currency':
+        return (
+          <input
+            type="number"
+            id={column.key}
+            name={column.key}
+            value={value}
+            onChange={(e) => handleInputChange(column.key, e.target.value)}
+            step={fieldConfig.type === 'currency' ? "0.01" : "1"}
+            className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+          />
+        );
+
+      case 'longtext':
+        return (
+          <textarea
+            id={column.key}
+            name={column.key}
+            value={value}
+            onChange={(e) => handleInputChange(column.key, e.target.value)}
+            rows={3}
+            className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+          />
+        );
+
+      default:
+        return (
+          <input
+            type="text"
+            id={column.key}
+            name={column.key}
+            value={value}
+            onChange={(e) => handleInputChange(column.key, e.target.value)}
+            className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
+          />
+        );
     }
-
-    if (column.key === 'priority' && type === 'tasks') {
-      return (
-        <StatusDropdown
-          type="task-priority"
-          value={value}
-          onChange={(value) => handleInputChange(column.key, value)}
-        />
-      );
-    }
-
-    if (isDateField(column.key)) {
-      return (
-        <input
-          type="date"
-          id={column.key}
-          name={column.key}
-          value={formatDateForInput(value)}
-          onChange={(e) => {
-            handleInputChange(column.key, e.target.value);
-          }}
-          className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
-        />
-      );
-    }
-
-    return (
-      <input
-        type="text"
-        id={column.key}
-        name={column.key}
-        value={value}
-        onChange={(e) => handleInputChange(column.key, e.target.value)}
-        className="w-full px-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 text-white"
-      />
-    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,12 +153,23 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
 
     try {
       const processedData = Object.entries(formData).reduce((acc, [key, value]) => {
-        if (isDateField(key) && value) {
-          // Ensure dates are in ISO format
-          const date = new Date(value);
-          acc[key] = date.toISOString();
-        } else {
-          acc[key] = value;
+        const column = columns.find(col => col.key === key);
+        if (!column) return acc;
+
+        switch (column.fieldConfig.type) {
+          case 'date':
+            if (value) {
+              acc[key] = new Date(value).toISOString();
+            }
+            break;
+          case 'number':
+          case 'currency':
+            if (value) {
+              acc[key] = parseFloat(value);
+            }
+            break;
+          default:
+            acc[key] = value;
         }
         return acc;
       }, {} as Record<string, any>);
@@ -192,16 +221,14 @@ const CreateEntryModal = ({ isOpen, onClose, type, columns, onSuccess }: CreateE
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-            {formColumns.map((column) => {
-              return (
-                <div key={column.key}>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    {column.label}
-                  </label>
-                  {renderInput(column)}
-                </div>
-              );
-            })}
+            {formColumns.map((column) => (
+              <div key={column.key}>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  {column.label}
+                </label>
+                {renderInput(column)}
+              </div>
+            ))}
           </div>
 
           <div className="mt-6 flex justify-end gap-3">

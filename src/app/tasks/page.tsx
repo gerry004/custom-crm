@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
-import { formatColumns, type ColumnFormat } from '@/utils/columnTransformers';
+import { ColumnFormat } from '@/types/fieldTypes';
+import { formatColumns } from '@/utils/columnTransformers';
 import { formatDateForInput, isDateField } from '@/utils/dateFormatter';
 
 export default function TasksPage() {

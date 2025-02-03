@@ -1,4 +1,5 @@
 import React from 'react';
+import { FieldOption } from '@/types/fieldTypes';
 
 export const TASK_STATUSES = ['To Do', 'In Progress', 'Done'] as const;
 export const TASK_PRIORITIES = ['Low', 'Medium', 'High'] as const;
@@ -28,37 +29,20 @@ export const STATUS_COLORS = {
 type DropdownType = 'task-status' | 'task-priority' | 'customer-status' | 'lead-status';
 
 interface StatusDropdownProps {
-  type: DropdownType;
+  options: readonly FieldOption[];
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
   autoFocus?: boolean;
 }
 
-const getOptions = (type: DropdownType) => {
-  switch (type) {
-    case 'task-status':
-      return TASK_STATUSES;
-    case 'task-priority':
-      return TASK_PRIORITIES;
-    case 'customer-status':
-      return CUSTOMER_STATUSES;
-    case 'lead-status':
-      return LEAD_STATUSES;
-    default:
-      return [];
-  }
-};
-
 const StatusDropdown: React.FC<StatusDropdownProps> = ({
-  type,
+  options,
   value,
   onChange,
   onBlur,
   autoFocus = false,
 }) => {
-  const options = getOptions(type);
-
   return (
     <div className="relative">
       <select
@@ -72,11 +56,11 @@ const StatusDropdown: React.FC<StatusDropdownProps> = ({
         <option value="" className="text-gray-400 italic py-3">Select an option</option>
         {options.map((option) => (
           <option 
-            key={option} 
-            value={option}
+            key={option.value} 
+            value={option.value}
             className="text-white py-3"
           >
-            {option}
+            {option.label}
           </option>
         ))}
       </select>
