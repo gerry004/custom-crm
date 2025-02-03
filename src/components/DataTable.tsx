@@ -546,28 +546,36 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className={`px-6 py-4 text-sm whitespace-nowrap cursor-pointer hover:bg-[#3f3f3f] transition-colors`}
+                      className={`px-6 py-4 text-sm whitespace-nowrap cursor-pointer hover:bg-[#3f3f3f] transition-colors relative ${
+                        column.key === 'status' || 
+                        column.key === 'priority' || 
+                        DATE_FORMAT_FIELDS.includes(column.key as any)
+                          ? 'text-center'
+                          : ''
+                      }`}
                       onClick={() => handleCellClick(column, row)}
                     >
                       {editingCell?.id === row.id && editingCell?.key === column.key ? (
                         ((type === 'tasks' && (column.key === 'status' || column.key === 'priority')) ||
                          (type === 'customers' && column.key === 'status') ||
                          (type === 'leads' && column.key === 'status')) ? (
-                          <StatusDropdown
-                            type={
-                              type === 'tasks'
-                                ? column.key === 'status'
-                                  ? 'task-status'
-                                  : 'task-priority'
-                                : type === 'customers'
-                                ? 'customer-status'
-                                : 'lead-status'
-                            }
-                            value={editingCell.value}
-                            onChange={(value) => handleCellEdit(row.id, column.key, value)}
-                            onBlur={() => setEditingCell(null)}
-                            autoFocus
-                          />
+                          <div className="flex justify-center">
+                            <StatusDropdown
+                              type={
+                                type === 'tasks'
+                                  ? column.key === 'status'
+                                    ? 'task-status'
+                                    : 'task-priority'
+                                  : type === 'customers'
+                                  ? 'customer-status'
+                                  : 'lead-status'
+                              }
+                              value={editingCell.value}
+                              onChange={(value) => handleCellEdit(row.id, column.key, value)}
+                              onBlur={() => setEditingCell(null)}
+                              autoFocus
+                            />
+                          </div>
                         ) : (
                           <input
                             type="text"
@@ -585,13 +593,23 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                           />
                         )
                       ) : (
-                        <div className="flex items-center gap-2">
-                          {formatCellDisplay(row[column.key], column.key)}
-                          <FiEdit2 
-                            size={14} 
-                            className="opacity-0 group-hover:opacity-50 hover:opacity-100 text-gray-400"
-                          />
-                        </div>
+                        <>
+                          <div className={`flex items-center ${
+                            column.key === 'status' || 
+                            column.key === 'priority' || 
+                            DATE_FORMAT_FIELDS.includes(column.key as any)
+                              ? 'justify-center'
+                              : ''
+                          }`}>
+                            {formatCellDisplay(row[column.key], column.key)}
+                          </div>
+                          <div className="absolute top-2 right-2">
+                            <FiEdit2 
+                              size={14} 
+                              className="opacity-0 group-hover:opacity-50 hover:opacity-100 text-gray-400"
+                            />
+                          </div>
+                        </>
                       )}
                     </td>
                   ))}
