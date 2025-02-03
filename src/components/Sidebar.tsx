@@ -1,10 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiUsers, FiUserPlus, FiCheckSquare, FiUserCheck, FiLogOut } from 'react-icons/fi';
 
+interface User {
+  name: string;
+  email: string;
+}
+
 const Sidebar = () => {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/auth/user');
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -62,13 +84,22 @@ const Sidebar = () => {
         </Link>
       </div>
 
-      <button
-        onClick={handleLogout}
-        className="mt-auto flex items-center gap-2 p-2 w-full hover:bg-[#2f2f2f] rounded-md text-red-400 hover:text-red-300 transition-colors"
-      >
-        <FiLogOut className="text-lg" />
-        <span>Logout</span>
-      </button>
+      <div className="mt-auto">
+        {user && (
+          <div className="px-2 py-3 border-t border-gray-800">
+            <div className="text-sm font-medium text-white">{user.name}</div>
+            <div className="text-xs text-gray-400">{user.email}</div>
+          </div>
+        )}
+        
+        <button
+          onClick={handleLogout}
+          className="mt-2 flex items-center gap-2 p-2 w-full hover:bg-[#2f2f2f] rounded-md text-red-400 hover:text-red-300 transition-colors"
+        >
+          <FiLogOut className="text-lg" />
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
   );
 };
