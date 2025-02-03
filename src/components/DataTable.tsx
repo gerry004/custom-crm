@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FiSearch, FiTrash2, FiMove, FiEdit2 } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove, FiEdit2, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 import StatusDropdown, {
   STATUS_COLORS,
@@ -48,6 +48,101 @@ const LEAD_STATUS_COLORS = {
 
 const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'] as const;
 
+interface SortItem {
+  key: string;
+  direction: 'asc' | 'desc';
+}
+
+const SortConfigPanel = ({ 
+  sortConfig, 
+  setSortConfig, 
+  columns 
+}: { 
+  sortConfig: SortItem[];
+  setSortConfig: React.Dispatch<React.SetStateAction<SortItem[]>>;
+  columns: ColumnFormat[];
+}) => {
+  const availableColumns = columns.filter(
+    col => !sortConfig.find(sort => sort.key === col.key)
+  );
+
+  const handleAddSort = () => {
+    if (availableColumns.length === 0) return;
+    setSortConfig(current => [...current, { key: availableColumns[0].key, direction: 'asc' }]);
+  };
+
+  const handleRemoveSort = (index: number) => {
+    setSortConfig(current => current.filter((_, i) => i !== index));
+  };
+
+  const handleChangeColumn = (index: number, key: string) => {
+    setSortConfig(current => current.map((item, i) => 
+      i === index ? { ...item, key } : item
+    ));
+  };
+
+  const handleToggleDirection = (index: number) => {
+    setSortConfig(current => current.map((item, i) => 
+      i === index ? { ...item, direction: item.direction === 'asc' ? 'desc' : 'asc' } : item
+    ));
+  };
+
+  if (sortConfig.length === 0) return null;
+
+  return (
+    <div className="mb-4 p-4 bg-[#2f2f2f] rounded-lg">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-300">Sort Configuration</h3>
+        {availableColumns.length > 0 && (
+          <button
+            onClick={handleAddSort}
+            className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300"
+          >
+            <FiPlus size={14} />
+            Add Sort
+          </button>
+        )}
+      </div>
+      <div className="space-y-2">
+        {sortConfig.map((sort, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <select
+              value={sort.key}
+              onChange={(e) => handleChangeColumn(index, e.target.value)}
+              className="bg-[#3f3f3f] text-sm text-gray-300 rounded px-2 py-1 border border-gray-600"
+            >
+              <option value={sort.key}>
+                {columns.find(col => col.key === sort.key)?.label}
+              </option>
+              {availableColumns.map(col => (
+                <option key={col.key} value={col.key}>
+                  {col.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => handleToggleDirection(index)}
+              className="flex items-center gap-1 px-2 py-1 bg-[#3f3f3f] rounded text-sm text-gray-300"
+            >
+              {sort.direction === 'asc' ? (
+                <FiChevronUp size={14} className="text-blue-400" />
+              ) : (
+                <FiChevronDown size={14} className="text-blue-400" />
+              )}
+            </button>
+            <button
+              onClick={() => handleRemoveSort(index)}
+              className="text-gray-400 hover:text-red-400"
+            >
+              <FiX size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
@@ -59,6 +154,8 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
   } | null>(null);
   const [localData, setLocalData] = React.useState(data);
   const [draggedItem, setDraggedItem] = React.useState<number | null>(null);
+  const [sortConfig, setSortConfig] = React.useState<SortItem[]>([]);
+  const [showSortConfig, setShowSortConfig] = React.useState(false);
 
   // Define default searchable fields based on type
   const defaultSearchFields = React.useMemo(() => {
@@ -75,14 +172,50 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     }
   }, [type]);
 
-  // Filter data when search query or data changes
+  // Update the sorting function to handle multiple columns
+  const sortData = React.useCallback((data: any[], sortItems: SortItem[]) => {
+    if (!sortItems.length) return data;
+
+    return [...data].sort((a, b) => {
+      for (const { key, direction } of sortItems) {
+        const aValue = a[key];
+        const bValue = b[key];
+
+        // Skip to next sort criteria if values are equal
+        if (aValue === bValue) continue;
+
+        // Handle null/undefined values
+        if (aValue == null) return direction === 'asc' ? -1 : 1;
+        if (bValue == null) return direction === 'asc' ? 1 : -1;
+
+        // Handle dates
+        if (DATE_FORMAT_FIELDS.includes(key as any)) {
+          const comparison = new Date(aValue).getTime() - new Date(bValue).getTime();
+          return direction === 'asc' ? comparison : -comparison;
+        }
+
+        // Handle strings and numbers
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue);
+          return direction === 'asc' ? comparison : -comparison;
+        }
+
+        const comparison = aValue - bValue;
+        return direction === 'asc' ? comparison : -comparison;
+      }
+      return 0;
+    });
+  }, []);
+
+  // Update filteredData to use new sorting
   const filteredData = React.useMemo(() => {
-    return searchObjects(
+    const searchResults = searchObjects(
       localData,
       searchQuery,
       searchableFields || defaultSearchFields
     );
-  }, [localData, searchQuery, searchableFields, defaultSearchFields]);
+    return sortData(searchResults, sortConfig);
+  }, [localData, searchQuery, searchableFields, defaultSearchFields, sortConfig, sortData]);
 
   React.useEffect(() => {
     setLocalData(data);
@@ -285,6 +418,21 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     // ...
   };
 
+  // Simplify handleSort to just toggle between asc/desc for a single column
+  const handleSort = (key: string) => {
+    setSortConfig(current => {
+      // If clicking the same column, toggle direction
+      if (current[0]?.key === key) {
+        if (current[0].direction === 'asc') {
+          return [{ key, direction: 'desc' }];
+        }
+        return [];
+      }
+      // If clicking a new column, sort ascending
+      return [{ key, direction: 'asc' }];
+    });
+  };
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
@@ -306,6 +454,17 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
               className="pl-10 pr-4 py-2 bg-[#2f2f2f] rounded-md border border-gray-700 focus:outline-none focus:border-blue-500"
             />
           </div>
+          <button
+            onClick={() => setShowSortConfig(!showSortConfig)}
+            className={`px-3 py-2 rounded-md border transition-colors ${
+              showSortConfig || sortConfig.length > 0
+                ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 hover:bg-blue-500/30'
+                : 'border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
+            }`}
+            title="Toggle sort configuration"
+          >
+            <FiFilter size={18} />
+          </button>
           <button 
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
             onClick={() => setIsModalOpen(true)}
@@ -314,6 +473,14 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
           </button>
         </div>
       </div>
+
+      {showSortConfig && (
+        <SortConfigPanel 
+          sortConfig={sortConfig}
+          setSortConfig={setSortConfig}
+          columns={columns}
+        />
+      )}
 
       <div className="bg-[#191919] rounded-lg overflow-hidden">
         <table className="w-full">
@@ -324,7 +491,21 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                   key={column.key}
                   className="px-6 py-3 text-left text-sm font-medium"
                 >
-                  {column.label}
+                  <button
+                    className="flex items-center gap-2 hover:text-white w-full"
+                    onClick={() => handleSort(column.key)}
+                  >
+                    <span className="flex-grow">{column.label}</span>
+                    {sortConfig[0]?.key === column.key && (
+                      <span className="text-blue-400">
+                        {sortConfig[0].direction === 'asc' ? (
+                          <FiChevronUp size={16} />
+                        ) : (
+                          <FiChevronDown size={16} />
+                        )}
+                      </span>
+                    )}
+                  </button>
                 </th>
               ))}
               <th className="px-6 py-3 text-left text-sm font-medium">
