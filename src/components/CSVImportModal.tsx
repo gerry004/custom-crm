@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { FiX, FiUpload } from 'react-icons/fi';
-import { ColumnFormat } from '@/utils/columnTransformers';
+import { ColumnFormat } from '@/types/fieldTypes';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -203,7 +203,7 @@ const CSVImportModal = ({ isOpen, onClose, columns, onImport, type }: CSVImportM
                         <option value="">-- Skip this column --</option>
                         {columns.map((col) => (
                           <option key={col.key} value={col.key}>
-                            {col.label}
+                            {col.fieldConfig.label}
                           </option>
                         ))}
                       </select>

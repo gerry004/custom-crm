@@ -1,16 +1,12 @@
 'use client';
 
 import React from 'react';
-import { FiSearch, FiTrash2, FiMove, FiEdit2, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
-import {
-  STATUS_COLORS,
-} from './StatusDropdown';
-import { toDbColumn, formatCellValue } from '@/utils/columnTransformers';
 import { searchObjects } from '@/utils/searchUtils';
 import CSVImportModal from './CSVImportModal';
 import { DataTableField } from './DataTableField';
-import { ColumnFormat } from '@/types/fieldTypes';
+import { ColumnFormat, FieldConfig } from '@/types/fieldTypes';
 
 interface DataTableProps {
   columns: ColumnFormat[];
@@ -22,25 +18,6 @@ interface DataTableProps {
 
 const TIMESTAMP_FIELDS = ['createdAt', 'updatedAt'] as const;
 const DATE_FORMAT_FIELDS = ['lastContact', 'createdAt', 'updatedAt', 'dueDate'] as const;
-
-const PRIORITY_COLORS = {
-  'Low': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
-  'Medium': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
-  'High': 'bg-red-500/20 text-red-500 border-red-500/50',
-} as const;
-
-const CUSTOMER_STATUS_COLORS = {
-  'Active': 'bg-green-500/20 text-green-500 border-green-500/50',
-  'Inactive': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
-  'Pending': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
-} as const;
-
-const LEAD_STATUS_COLORS = {
-  'New': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
-  'Contacted': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
-  'Qualified': 'bg-green-500/20 text-green-500 border-green-500/50',
-  'Lost': 'bg-gray-500/20 text-gray-300 border-gray-500/50',
-} as const;
 
 interface SortItem {
   key: string;
@@ -106,11 +83,11 @@ const SortConfigPanel = ({
               className="bg-[#3f3f3f] text-sm text-gray-300 rounded px-2 py-1 border border-gray-600"
             >
               <option value={sort.key}>
-                {columns.find(col => col.key === sort.key)?.label}
+                {columns.find(col => col.key === sort.key)?.fieldConfig.label}
               </option>
               {availableColumns.map(col => (
                 <option key={col.key} value={col.key}>
-                  {col.label}
+                  {col.fieldConfig.label}
                 </option>
               ))}
             </select>
@@ -173,34 +150,38 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
 
     return [...data].sort((a, b) => {
       for (const { key, direction } of sortItems) {
+        const column = columns.find(col => col.key === key);
+        if (!column) continue;
+
         const aValue = a[key];
         const bValue = b[key];
 
-        // Skip to next sort criteria if values are equal
         if (aValue === bValue) continue;
-
-        // Handle null/undefined values
         if (aValue == null) return direction === 'asc' ? -1 : 1;
         if (bValue == null) return direction === 'asc' ? 1 : -1;
 
-        // Handle dates
-        if (DATE_FORMAT_FIELDS.includes(key as any)) {
-          const comparison = new Date(aValue).getTime() - new Date(bValue).getTime();
-          return direction === 'asc' ? comparison : -comparison;
-        }
-
-        // Handle strings and numbers
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          const comparison = aValue.localeCompare(bValue);
-          return direction === 'asc' ? comparison : -comparison;
-        }
-
-        const comparison = aValue - bValue;
+        const comparison = compareValues(aValue, bValue, column.fieldConfig);
         return direction === 'asc' ? comparison : -comparison;
       }
       return 0;
     });
-  }, []);
+  }, [columns]);
+
+  // Helper function for comparing values based on field type
+  function compareValues(a: any, b: any, fieldConfig: FieldConfig): number {
+    switch (fieldConfig.type) {
+      case 'date':
+      case 'timestamp':
+        return new Date(a).getTime() - new Date(b).getTime();
+      
+      case 'number':
+      case 'currency':
+        return Number(a) - Number(b);
+      
+      default:
+        return String(a).localeCompare(String(b));
+    }
+  }
 
   // Update filteredData to use new sorting
   const filteredData = React.useMemo(() => {
@@ -269,20 +250,6 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     }
   };
 
-  const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>, row: any) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur();
-    } else if (e.key === 'Escape') {
-      if (editingCell) {
-        setEditingCell({
-          ...editingCell,
-          value: row[editingCell.key]
-        });
-      }
-      setEditingCell(null);
-    }
-  }, [editingCell]);
-
   const handleInputBlur = React.useCallback((row: any) => {
     if (!editingCell) return;
     
@@ -293,79 +260,18 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     }
   }, [editingCell]);
 
-  const formatDate = React.useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    return [
-      date.getDate().toString().padStart(2, '0'),
-      '/',
-      (date.getMonth() + 1).toString().padStart(2, '0'),
-      '/',
-      date.getFullYear()
-    ].join('');
-  }, []);
-
-  const formatCellDisplay = React.useCallback((value: any, key: string) => {
-    if (value === null || value === undefined) return '';
-    
-    if (DATE_FORMAT_FIELDS.includes(key as any) && value) {
-      return formatDate(value);
-    }
-
-    if (key === 'status') {
-      if (type === 'tasks') {
-        return (
-          <span className={`px-2 py-1 rounded-full text-sm border ${STATUS_COLORS[value as keyof typeof STATUS_COLORS]}`}>
-            {value}
-          </span>
-        );
-      }
-      if (type === 'customers') {
-        return (
-          <span className={`px-2 py-1 rounded-full text-sm border ${CUSTOMER_STATUS_COLORS[value as keyof typeof CUSTOMER_STATUS_COLORS]}`}>
-            {value}
-          </span>
-        );
-      }
-      if (type === 'leads') {
-        return (
-          <span className={`px-2 py-1 rounded-full text-sm border ${LEAD_STATUS_COLORS[value as keyof typeof LEAD_STATUS_COLORS]}`}>
-            {value}
-          </span>
-        );
-      }
-    }
-
-    if (key === 'priority' && type === 'tasks') {
-      return (
-        <span className={`px-2 py-1 rounded-full text-sm border ${PRIORITY_COLORS[value as keyof typeof PRIORITY_COLORS]}`}>
-          {value}
-        </span>
-      );
-    }
-
-    return formatCellValue(value, key);
-  }, [formatDate, type]);
-
   const handleCellClick = React.useCallback((column: ColumnFormat, row: any) => {
-    if (TIMESTAMP_FIELDS.includes(column.key as any)) return;
+    const { fieldConfig } = column;
     
-    if ((type === 'tasks' && (column.key === 'status' || column.key === 'priority')) ||
-        (type === 'customers' && column.key === 'status') ||
-        (type === 'leads' && column.key === 'status')) {
-      setEditingCell({
-        id: row.id,
-        key: column.key,
-        value: row[column.key],
-      });
-      return;
-    }
-
+    // Don't allow editing of readonly fields
+    if (fieldConfig.readOnly) return;
+    
     setEditingCell({
       id: row.id,
       key: column.key,
       value: row[column.key],
     });
-  }, [type]);
+  }, []);
 
   const handleReorder = async (fromId: number, toId: number) => {
     if (fromId === toId) return;
@@ -400,17 +306,6 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
       console.error('Error reordering items:', error);
       alert('Failed to reorder items');
     }
-  };
-
-  const handleSubmit = async (formData: any) => {
-    const dbFormattedData = Object.keys(formData).reduce((acc, key) => {
-      const dbKey = toDbColumn(key);
-      acc[dbKey] = formData[key];
-      return acc;
-    }, {} as Record<string, any>);
-
-    // Now send dbFormattedData to your API
-    // ...
   };
 
   // Simplify handleSort to just toggle between asc/desc for a single column
@@ -521,7 +416,7 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                     className="flex items-center gap-2 hover:text-white w-full"
                     onClick={() => handleSort(column.key)}
                   >
-                    <span className="flex-grow">{column.label}</span>
+                    <span className="flex-grow">{column.fieldConfig.label}</span>
                     {sortConfig[0]?.key === column.key && (
                       <span className="text-blue-400">
                         {sortConfig[0].direction === 'asc' ? (

@@ -7,7 +7,8 @@ export type FieldType =
   | 'phone'
   | 'url'
   | 'currency'
-  | 'longtext';
+  | 'longtext'
+  | 'timestamp';
 
 export interface FieldOption {
   value: string;
@@ -15,28 +16,57 @@ export interface FieldOption {
   color?: string;
 }
 
-export interface FieldConfig {
+export interface BaseFieldConfig {
   type: FieldType;
-  options?: readonly FieldOption[];
-  validation?: {
-    required?: boolean;
-    min?: number;
-    max?: number;
-    pattern?: RegExp;
-  };
+  label: string;
+  required?: boolean;
+  readOnly?: boolean;
+  defaultValue?: any;
 }
+
+export interface TextFieldConfig extends BaseFieldConfig {
+  type: 'text' | 'email' | 'phone' | 'url' | 'longtext';
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+}
+
+export interface NumberFieldConfig extends BaseFieldConfig {
+  type: 'number' | 'currency';
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface DateFieldConfig extends BaseFieldConfig {
+  type: 'date' | 'timestamp';
+  min?: string;
+  max?: string;
+  format?: string;
+}
+
+export interface OptionFieldConfig extends BaseFieldConfig {
+  type: 'option';
+  options: readonly FieldOption[];
+  multiple?: boolean;
+}
+
+export type FieldConfig = 
+  | TextFieldConfig 
+  | NumberFieldConfig 
+  | DateFieldConfig 
+  | OptionFieldConfig;
 
 export interface ColumnFormat {
   key: string;
-  label: string;
   dbColumn: string;
   fieldConfig: FieldConfig;
 }
 
-// Centralized status/priority configurations
 export const FIELD_CONFIGS = {
   taskStatus: {
     type: 'option' as const,
+    label: 'Status',
     options: [
       { value: 'To Do', label: 'To Do', color: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' },
       { value: 'In Progress', label: 'In Progress', color: 'bg-blue-500/20 text-blue-500 border-blue-500/50' },

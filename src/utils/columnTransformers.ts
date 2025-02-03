@@ -1,71 +1,78 @@
-import { isDateField, formatDateForDisplay } from './dateFormatter';
 import { ColumnFormat, FieldConfig, FIELD_CONFIGS } from '@/types/fieldTypes';
 
-// Helper function to properly capitalize special terms
-function formatSpecialTerms(word: string): string {
-  const specialTerms: Record<string, string> = {
-    'id': 'ID',
-    'url': 'URL',
-    'ip': 'IP',
-    'api': 'API'
-  };
-  
-  return specialTerms[word.toLowerCase()] || word;
-}
-
 // Helper to detect field type from column name and data
-function detectFieldConfig(dbColumn: string): FieldConfig {
+function detectFieldConfig(dbColumn: string, value?: any): FieldConfig {
   const columnLower = dbColumn.toLowerCase();
   
-  // Detect option fields (status and priority) FIRST
-  if (columnLower === 'status') {
-    if (dbColumn.includes('task')) return FIELD_CONFIGS.taskStatus;
-    if (dbColumn.includes('customer')) return FIELD_CONFIGS.customerStatus;
-    if (dbColumn.includes('lead')) return FIELD_CONFIGS.leadStatus;
-    // If no specific type is found, return customerStatus as default
-    return FIELD_CONFIGS.customerStatus;
+  // Status fields
+  if (columnLower.includes('status')) {
+    if (columnLower.includes('task')) {
+      return { ...FIELD_CONFIGS.taskStatus };
+    }
+    if (columnLower.includes('customer')) {
+      return { ...FIELD_CONFIGS.customerStatus, label: 'Customer Status' };
+    }
+    if (columnLower.includes('lead')) {
+      return { ...FIELD_CONFIGS.leadStatus, label: 'Lead Status' };
+    }
+    return { ...FIELD_CONFIGS.taskStatus, label: formatColumnLabel(dbColumn) };
   }
 
-  if (columnLower === 'priority') {
-    return FIELD_CONFIGS.priority;
+  // Priority field
+  if (columnLower.includes('priority')) {
+    return { ...FIELD_CONFIGS.priority, label: 'Priority' };
   }
 
-  // THEN detect date fields
-  if (columnLower.includes('date') || 
-      (columnLower.includes('at') && !columnLower.includes('status')) || 
-      ['last_contact', 'created_at', 'updated_at', 'due_date'].includes(columnLower)) {
-    return { type: 'date' };
+  // Date/Timestamp fields
+  if (columnLower.includes('_at') || 
+      columnLower.includes('date') || 
+      columnLower.includes('last_contact')) {
+    return {
+      type: columnLower.includes('_at') ? 'timestamp' : 'date',
+      label: formatColumnLabel(dbColumn),
+      readOnly: columnLower.includes('created_at') || columnLower.includes('updated_at')
+    };
   }
 
-  // Detect other field types
-  if (columnLower.includes('email')) return { type: 'email' };
-  if (columnLower.includes('phone')) return { type: 'phone' };
-  if (columnLower.includes('amount') || columnLower.includes('price')) return { type: 'currency' };
-  if (columnLower.includes('description')) return { type: 'longtext' };
-  
+  // Other field types
+  if (columnLower.includes('email')) {
+    return { type: 'email', label: formatColumnLabel(dbColumn) };
+  }
+  if (columnLower.includes('phone')) {
+    return { type: 'phone', label: formatColumnLabel(dbColumn) };
+  }
+  if (columnLower.includes('amount') || columnLower.includes('price')) {
+    return { 
+      type: 'currency',
+      label: formatColumnLabel(dbColumn),
+      step: 0.01,
+      min: 0
+    };
+  }
+  if (columnLower.includes('description')) {
+    return { type: 'text', label: formatColumnLabel(dbColumn) };
+  }
+
   // Default to text
-  return { type: 'text' };
+  return { type: 'text', label: formatColumnLabel(dbColumn) };
+}
+
+function formatColumnLabel(dbColumn: string): string {
+  return dbColumn
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 export function formatColumnName(dbColumn: string): ColumnFormat {
-  if (!dbColumn || typeof dbColumn !== 'string') {
-    throw new Error(`Invalid column name: ${dbColumn}`);
-  }
-
   const key = dbColumn
     .toLowerCase()
     .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
-
-  const label = dbColumn
-    .split('_')
-    .map(word => formatSpecialTerms(word))
-    .join(' ');
 
   const fieldConfig = detectFieldConfig(dbColumn);
 
   return {
     key,
-    label,
     dbColumn,
     fieldConfig
   };
@@ -82,35 +89,11 @@ export function formatColumns(dbColumns: string[]): ColumnFormat[] {
       return formatColumnName(dbColumn);
     } catch (error) {
       console.error(`Error formatting column ${dbColumn}:`, error);
-      // Return a default column format if there's an error
       return {
         key: dbColumn,
-        label: dbColumn,
         dbColumn: dbColumn,
-        fieldConfig: { type: 'text' }
+        fieldConfig: { type: 'text', label: dbColumn }
       };
     }
   });
 }
-
-// Convert camelCase back to snake_case for database operations
-export function toDbColumn(key: string): string {
-  return key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-}
-
-// Format cell value based on column type
-export function formatCellValue(value: any, key: string): any {
-  if (value === null || value === undefined) return '';
-  
-  // Handle date fields
-  if (isDateField(key)) {
-    return formatDateForDisplay(value);
-  }
-
-  // Handle ID fields - ensure they're displayed as numbers
-  if (key.toLowerCase().endsWith('id')) {
-    return Number(value);
-  }
-
-  return value;
-} 
