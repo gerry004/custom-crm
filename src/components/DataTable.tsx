@@ -257,18 +257,26 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     if (!editingCell) return;
     
     try {
+      // Get the column config for this field
+      const column = columns.find(col => col.key === editingCell.key);
+      if (!column) return;
+
+      // Process the value based on field type
+      let valueToSend = editingCell.value;
+      if (column.fieldConfig.type === 'date' || column.fieldConfig.type === 'timestamp') {
+        valueToSend = editingCell.value || null; // Convert empty string to null for dates
+      }
+
       const response = await fetch(`/api/${type}/${row.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ [editingCell.key]: editingCell.value }),
+        body: JSON.stringify({ [editingCell.key]: valueToSend }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to update entry');
-        // Optionally revert the local change if the API call fails
-        // setLocalData(data);
       }
 
       const updatedEntry = await response.json();
@@ -281,7 +289,7 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     } finally {
       setEditingCell(null);
     }
-  }, [editingCell, type]);
+  }, [editingCell, type, columns]);
 
   const handleReorder = async (fromId: number, toId: number) => {
     if (fromId === toId) return;
