@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
+import { formatColumns, type ColumnFormat } from '@/utils/columnTransformers';
+import { formatDateForInput, isDateField } from '@/utils/dateFormatter';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
-  const [columns, setColumns] = useState([]);
+  const [columns, setColumns] = useState<ColumnFormat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,18 +26,18 @@ export default function TasksPage() {
       const columnsData = await columnsResponse.json();
       const tasksData = await tasksResponse.json();
 
-      const formattedColumns = columnsData.map((column: string) => ({
-        key: column
-          .toLowerCase()
-          .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase()),
-        label: column
-          .split('_')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ')
-      }));
+      const formattedTasks = tasksData.map((task: any) => {
+        const formattedTask = { ...task };
+        Object.keys(formattedTask).forEach(key => {
+          if (isDateField(key) && formattedTask[key]) {
+            formattedTask[key] = formatDateForInput(formattedTask[key]);
+          }
+        });
+        return formattedTask;
+      });
 
-      setColumns(formattedColumns);
-      setTasks(tasksData);
+      setColumns(formatColumns(columnsData));
+      setTasks(formattedTasks);
     } catch (err) {
       console.error('Error in fetchData:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data');

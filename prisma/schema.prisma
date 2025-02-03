@@ -15,7 +15,7 @@ model Lead {
   status    String   @default("New")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  userId    Int
+  userId    Int      @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
 
   @@map("leads")
@@ -27,10 +27,10 @@ model Customer {
   email       String?
   phone       String?
   status      String   @default("Pending")
-  lastContact DateTime?
+  lastContact DateTime? @map("last_contact")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  userId      Int
+  userId      Int      @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
 
   @@map("customers")
@@ -42,10 +42,10 @@ model Task {
   description String?
   status      String   @default("To Do")
   priority    String   @default("Medium")
-  dueDate     DateTime?
+  dueDate     DateTime? @map("due_date")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  userId      Int
+  userId      Int      @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
 
   @@map("tasks")
@@ -53,8 +53,8 @@ model Task {
 
 model TeamMember {
   id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
+  name      String   @map("name")
+  email     String   @unique @map("email")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -63,9 +63,9 @@ model TeamMember {
 
 model User {
   id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
+  name      String   @map("name")
+  email     String   @unique @map("email")
+  password  String   @map("password")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   customers Customer[]

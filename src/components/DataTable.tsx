@@ -6,14 +6,10 @@ import CreateEntryModal from './CreateEntryModal';
 import StatusDropdown, {
   STATUS_COLORS,
 } from './StatusDropdown';
-
-interface Column {
-  key: string;
-  label: string;
-}
+import { ColumnFormat, toDbColumn, formatCellValue } from '@/utils/columnTransformers';
 
 interface DataTableProps {
-  columns: Column[];
+  columns: ColumnFormat[];
   data: any[];
   type: 'customers' | 'leads' | 'tasks' | 'team-members';
   onRefresh?: () => void;
@@ -154,7 +150,7 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
     ].join('');
   }, []);
 
-  const formatCellValue = React.useCallback((value: any, key: string) => {
+  const formatCellDisplay = React.useCallback((value: any, key: string) => {
     if (value === null || value === undefined) return '';
     
     if (DATE_FORMAT_FIELDS.includes(key as any) && value) {
@@ -193,7 +189,7 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
       );
     }
 
-    return value;
+    return formatCellValue(value, key);
   }, [formatDate, type]);
 
   const filteredData = React.useMemo(() => {
@@ -204,7 +200,7 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
     });
   }, [localData, searchQuery]);
 
-  const handleCellClick = React.useCallback((column: Column, row: any) => {
+  const handleCellClick = React.useCallback((column: ColumnFormat, row: any) => {
     if (TIMESTAMP_FIELDS.includes(column.key as any)) return;
     
     if ((type === 'tasks' && (column.key === 'status' || column.key === 'priority')) ||
@@ -258,6 +254,17 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
       console.error('Error reordering items:', error);
       alert('Failed to reorder items');
     }
+  };
+
+  const handleSubmit = async (formData: any) => {
+    const dbFormattedData = Object.keys(formData).reduce((acc, key) => {
+      const dbKey = toDbColumn(key);
+      acc[dbKey] = formData[key];
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Now send dbFormattedData to your API
+    // ...
   };
 
   return (
@@ -380,7 +387,7 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
                         )
                       ) : (
                         <div className="flex items-center gap-2">
-                          {formatCellValue(row[column.key], column.key)}
+                          {formatCellDisplay(row[column.key], column.key)}
                           <FiEdit2 
                             size={14} 
                             className="opacity-0 group-hover:opacity-50 hover:opacity-100 text-gray-400"
