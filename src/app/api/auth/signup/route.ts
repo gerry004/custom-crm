@@ -5,12 +5,10 @@ import jwt from 'jsonwebtoken';
 
 export async function POST(request: Request) {
   try {
-    await prisma.$connect(); // Explicitly connect to test connection
+    await prisma.$connect();
 
     const { name, email, password } = await request.json();
-    console.log('Received signup request for:', email); // Debug log
 
-    // Validate input
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: 'Name, email, and password are required' },
@@ -18,7 +16,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -30,12 +27,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user with better error handling
     try {
-      console.log('Attempting to create user...'); // Debug log
       const user = await prisma.user.create({
         data: {
           name,
@@ -43,9 +37,7 @@ export async function POST(request: Request) {
           password: hashedPassword,
         },
       });
-      console.log('User created successfully:', user.id); // Debug log
 
-      // Generate token
       const token = jwt.sign(
         { userId: user.id },
         process.env.JWT_SECRET || 'your-secret-key',

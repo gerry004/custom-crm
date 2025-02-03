@@ -4,23 +4,18 @@ import { jwtVerify } from 'jose';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  console.log('Middleware checking route:', pathname);
 
-  // Exclude authentication routes
   if (
     pathname === '/' ||
     pathname === '/signup' ||
     pathname.startsWith('/api/auth/')
   ) {
-    console.log('Skipping auth check for:', pathname);
     return NextResponse.next();
   }
 
   const token = request.cookies.get('token')?.value;
-  console.log('Token found:', !!token, 'for path:', pathname);
 
   if (!token) {
-    console.log('No token, redirecting to login from:', pathname);
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -30,7 +25,6 @@ export async function middleware(request: NextRequest) {
     );
     
     await jwtVerify(token, secret);
-    console.log('Token verified successfully for:', pathname);
     return NextResponse.next();
   } catch (error) {
     console.error('Token verification failed for:', pathname, error);

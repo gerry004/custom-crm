@@ -27,7 +27,6 @@ export default function SignUp() {
       });
 
       const data = await response.json();
-      console.log('Signup response:', data); // Debug log
 
       if (!response.ok) {
         throw new Error(data.error || data.details || 'Failed to sign up');

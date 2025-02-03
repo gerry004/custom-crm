@@ -24,7 +24,6 @@ export default function CustomersPage() {
       const columnsData = await columnsResponse.json();
       const customersData = await customersResponse.json();
 
-      console.log('Fetched customers:', customersData);
 
       const formattedColumns = columnsData.map((column: string) => ({
         key: column
@@ -55,7 +54,7 @@ export default function CustomersPage() {
 
   return (
     <Layout>
-      <div onClick={() => console.log('Layout clicked')}>
+      <div>
         <DataTable
           columns={columns}
           data={customers}
