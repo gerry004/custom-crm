@@ -7,12 +7,14 @@ import StatusDropdown, {
   STATUS_COLORS,
 } from './StatusDropdown';
 import { ColumnFormat, toDbColumn, formatCellValue } from '@/utils/columnTransformers';
+import { searchObjects } from '@/utils/searchUtils';
 
 interface DataTableProps {
   columns: ColumnFormat[];
   data: any[];
   type: 'customers' | 'leads' | 'tasks' | 'team-members';
   onRefresh?: () => void;
+  searchableFields?: string[];
 }
 
 // Move these outside component to avoid recreating on each render
@@ -46,7 +48,7 @@ const LEAD_STATUS_COLORS = {
 
 const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'] as const;
 
-const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
+const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -57,6 +59,30 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
   } | null>(null);
   const [localData, setLocalData] = React.useState(data);
   const [draggedItem, setDraggedItem] = React.useState<number | null>(null);
+
+  // Define default searchable fields based on type
+  const defaultSearchFields = React.useMemo(() => {
+    switch (type) {
+      case 'tasks':
+        return ['title', 'description', 'status', 'priority'];
+      case 'leads':
+      case 'customers':
+        return ['name', 'email', 'phone', 'status'];
+      case 'team-members':
+        return ['name', 'email'];
+      default:
+        return ['name', 'title'];
+    }
+  }, [type]);
+
+  // Filter data when search query or data changes
+  const filteredData = React.useMemo(() => {
+    return searchObjects(
+      localData,
+      searchQuery,
+      searchableFields || defaultSearchFields
+    );
+  }, [localData, searchQuery, searchableFields, defaultSearchFields]);
 
   React.useEffect(() => {
     setLocalData(data);
@@ -191,14 +217,6 @@ const DataTable = ({ columns, data, type, onRefresh }: DataTableProps) => {
 
     return formatCellValue(value, key);
   }, [formatDate, type]);
-
-  const filteredData = React.useMemo(() => {
-    return localData.filter((row) => {
-      if (!searchQuery) return true;
-      const name = String(row.name || '').toLowerCase();
-      return name.includes(searchQuery.toLowerCase());
-    });
-  }, [localData, searchQuery]);
 
   const handleCellClick = React.useCallback((column: ColumnFormat, row: any) => {
     if (TIMESTAMP_FIELDS.includes(column.key as any)) return;

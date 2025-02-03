@@ -60,6 +60,7 @@ export default function TasksPage() {
         data={tasks}
         type="tasks"
         onRefresh={fetchData}
+        searchableFields={['title', 'description', 'status', 'priority']}
       />
     </Layout>
   );
