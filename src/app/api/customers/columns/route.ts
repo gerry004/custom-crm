@@ -34,7 +34,6 @@ export async function GET() {
     `;
 
     const columnNames = columns.map(col => col.column_name);
-    console.log('API returning columns:', columnNames); // Debug log
     
     return NextResponse.json(columnNames);
   } catch (error) {

@@ -25,11 +25,8 @@ export default function CustomersPage() {
 
       const columnsData = await columnsResponse.json();
       const customersData = await customersResponse.json();
-
-      console.log('Raw columns data:', columnsData); // Debug log
       
       const formattedColumns = formatColumns(columnsData);
-      console.log('Formatted columns:', formattedColumns); // Debug log
 
       setColumns(formattedColumns);
       setCustomers(customersData);

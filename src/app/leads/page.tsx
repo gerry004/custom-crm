@@ -5,12 +5,15 @@ import DataTable from '../../components/DataTable';
 import Layout from '../../components/Layout';
 import { ColumnFormat } from '@/types/fieldTypes';
 import { formatColumns } from '@/utils/columnTransformers';
+import { useUser } from '@/hooks/useUser';
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
   const [columns, setColumns] = useState<ColumnFormat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { user } = useUser();
 
   const fetchData = async () => {
     try {
@@ -50,6 +53,7 @@ export default function LeadsPage() {
         data={leads}
         type="leads"
         onRefresh={fetchData}
+        user={user}
       />
     </Layout>
   );

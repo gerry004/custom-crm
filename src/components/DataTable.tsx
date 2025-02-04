@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiTrash2, FiMove, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload, FiMail } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 import { searchObjects } from '@/utils/searchUtils';
 import CSVImportModal from './CSVImportModal';
 import { DataTableField } from './DataTableField';
 import { ColumnFormat, FieldConfig } from '@/types/fieldTypes';
+import EmailModal from './EmailModal';
 
 interface DataTableProps {
   columns: ColumnFormat[];
@@ -14,6 +15,7 @@ interface DataTableProps {
   type: 'customers' | 'leads' | 'tasks' | 'finances';
   onRefresh?: () => void;
   searchableFields?: string[];
+  user?: { id: string; email: string; name?: string } | null;
 }
 
 const TIMESTAMP_FIELDS = ['createdAt', 'updatedAt'] as const;
@@ -114,7 +116,7 @@ const SortConfigPanel = ({
   );
 };
 
-const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTableProps) => {
+const DataTable = ({ columns, data, type, onRefresh, searchableFields, user }: DataTableProps) => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState<number | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -128,6 +130,8 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
     key: string;
     value: any;
   } | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<any>(null);
 
   // Define default searchable fields based on type
   const defaultSearchFields = React.useMemo(() => {
@@ -504,6 +508,18 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
                   ))}
                   <td className="px-6 py-4 text-sm whitespace-nowrap">
                     <div className="flex items-center gap-3">
+                      {type === 'leads' && (
+                        <button
+                          onClick={() => {
+                            setSelectedLead(row);
+                            setEmailModalOpen(true);
+                          }}
+                          className="text-gray-400 hover:text-blue-500 transition-colors"
+                          title="Send Email"
+                        >
+                          <FiMail size={18} />
+                        </button>
+                      )}
                       <button
                         className="text-gray-400 hover:text-gray-300 transition-colors cursor-move"
                         title="Move"
@@ -567,6 +583,18 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields }: DataTab
         onImport={handleImportData}
         type={type}
       />
+
+      {emailModalOpen && selectedLead && (
+        <EmailModal
+          isOpen={emailModalOpen}
+          onClose={() => {
+            setEmailModalOpen(false);
+            setSelectedLead(null);
+          }}
+          toEmail={selectedLead.email}
+          fromEmail={user?.email || ''}
+        />
+      )}
     </div>
   );
 };
