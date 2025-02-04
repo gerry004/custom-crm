@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiUsers, FiUserPlus, FiCheckSquare, FiUserCheck, FiLogOut, FiDollarSign } from 'react-icons/fi';
+import { FiUsers, FiUserPlus, FiCheckSquare, FiUserCheck, FiLogOut, FiDollarSign, FiMail } from 'react-icons/fi';
 
 interface User {
   name: string;
@@ -81,6 +81,14 @@ const Sidebar = () => {
         >
           <FiDollarSign className="text-lg" />
           <span>Finances</span>
+        </Link>
+
+        <Link 
+          href="/emails" 
+          className="flex items-center gap-2 p-2 hover:bg-[#2f2f2f] rounded-md"
+        >
+          <FiMail className="text-lg" />
+          <span>Emails</span>
         </Link>
       </div>
 
