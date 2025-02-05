@@ -63,8 +63,17 @@ export async function PATCH(
     let data = await request.json();
     
     // Process data based on table and field types
-    if (params.table === 'finances' && 'amount' in data) {
-      data.amount = parseFloat(data.amount);
+    if (params.table === 'finances') {
+      // Handle amount field
+      if ('amount' in data) {
+        data.amount = parseFloat(data.amount);
+      }
+      
+      // Handle date field
+      if ('date' in data) {
+        // If empty string or invalid date, set to null
+        data.date = data.date ? new Date(data.date).toISOString() : null;
+      }
     }
 
     const modelMap = {

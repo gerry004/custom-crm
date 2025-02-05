@@ -22,10 +22,7 @@ export async function GET(
     const items = await model.findMany({
       where: {
         userId: user.id
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      }
     });
 
     return NextResponse.json(items || []);

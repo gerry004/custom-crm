@@ -187,14 +187,14 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields, user }: D
     }
   }
 
-  // Update filteredData to use new sorting
+  // Update filteredData to only sort when sortConfig is not empty
   const filteredData = React.useMemo(() => {
     const searchResults = searchObjects(
       localData,
       searchQuery,
       searchableFields || defaultSearchFields
     );
-    return sortData(searchResults, sortConfig);
+    return sortConfig.length > 0 ? sortData(searchResults, sortConfig) : searchResults;
   }, [localData, searchQuery, searchableFields, defaultSearchFields, sortConfig, sortData]);
 
   // Update localData when props data changes

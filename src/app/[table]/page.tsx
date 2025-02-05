@@ -49,7 +49,7 @@ export default function TablePage({ params }: { params: { table: string } }) {
       const columnsData = await columnsResponse.json();
       const tableData = await dataResponse.json();
 
-      // Format dates
+      // Format dates without modifying the order
       const formattedData = tableData.map((item: any) => {
         const formattedItem = { ...item };
         columnsData.forEach(col => {
@@ -63,7 +63,6 @@ export default function TablePage({ params }: { params: { table: string } }) {
         return formattedItem;
       });
 
-      // Format columns with table name for options lookup
       const formattedColumns = await formatColumns(columnsData, table);
       setColumns(formattedColumns);
       setData(formattedData);
