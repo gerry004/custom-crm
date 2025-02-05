@@ -1,29 +1,33 @@
 import { ColumnFormat, FieldConfig, FIELD_CONFIGS } from '@/types/fieldTypes';
 
+async function getFieldOptions(tableName: string, columnName: string) {
+  try {
+    const response = await fetch(
+      `/api/field-options?table=${tableName}&column=${columnName}`
+    );
+    if (!response.ok) throw new Error('Failed to fetch options');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching field options:', error);
+    return [];
+  }
+}
+
 // Helper to detect field type from column name and data
-function detectFieldConfig(dbColumn: string, value?: any): FieldConfig {
+async function detectFieldConfig(dbColumn: string, tableName: string): Promise<FieldConfig> {
   const columnLower = dbColumn.toLowerCase();
   
-  // Status fields
-  if (columnLower.includes('status')) {
-    if (columnLower.includes('task')) {
-      return { ...FIELD_CONFIGS.taskStatus };
-    }
-    if (columnLower.includes('customer')) {
-      return { ...FIELD_CONFIGS.customerStatus, label: 'Customer Status' };
-    }
-    if (columnLower.includes('lead')) {
-      return { ...FIELD_CONFIGS.leadStatus, label: 'Lead Status' };
-    }
-    return { ...FIELD_CONFIGS.taskStatus, label: formatColumnLabel(dbColumn) };
+  // First check if this field has any options in the database
+  const options = await getFieldOptions(tableName, columnLower);
+  if (options.length > 0) {
+    return {
+      type: 'option',
+      label: formatColumnLabel(dbColumn),
+      options
+    };
   }
 
-  // Priority field
-  if (columnLower.includes('priority')) {
-    return { ...FIELD_CONFIGS.priority, label: 'Priority' };
-  }
-
-  // Date/Timestamp fields
+  // If no options found, continue with other field type detection
   if (columnLower.includes('_at') || 
       columnLower.includes('date') || 
       columnLower.includes('last_contact')) {
@@ -50,7 +54,7 @@ function detectFieldConfig(dbColumn: string, value?: any): FieldConfig {
     };
   }
   if (columnLower.includes('description')) {
-    return { type: 'text', label: formatColumnLabel(dbColumn) };
+    return { type: 'longtext', label: formatColumnLabel(dbColumn) };
   }
 
   // Default to text
@@ -64,12 +68,12 @@ function formatColumnLabel(dbColumn: string): string {
     .join(' ');
 }
 
-export function formatColumnName(dbColumn: string): ColumnFormat {
+export async function formatColumnName(dbColumn: string, tableName: string): Promise<ColumnFormat> {
   const key = dbColumn
     .toLowerCase()
     .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
-  const fieldConfig = detectFieldConfig(dbColumn);
+  const fieldConfig = await detectFieldConfig(dbColumn, tableName);
 
   return {
     key,
@@ -78,22 +82,15 @@ export function formatColumnName(dbColumn: string): ColumnFormat {
   };
 }
 
-export function formatColumns(dbColumns: string[]): ColumnFormat[] {
+export async function formatColumns(dbColumns: string[], tableName: string): Promise<ColumnFormat[]> {
   if (!Array.isArray(dbColumns)) {
     console.warn('formatColumns received invalid input:', dbColumns);
     return [];
   }
   
-  return dbColumns.map(dbColumn => {
-    try {
-      return formatColumnName(dbColumn);
-    } catch (error) {
-      console.error(`Error formatting column ${dbColumn}:`, error);
-      return {
-        key: dbColumn,
-        dbColumn: dbColumn,
-        fieldConfig: { type: 'text', label: dbColumn }
-      };
-    }
-  });
+  const formattedColumns = await Promise.all(
+    dbColumns.map(dbColumn => formatColumnName(dbColumn, tableName))
+  );
+  
+  return formattedColumns;
 }

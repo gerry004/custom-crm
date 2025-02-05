@@ -98,5 +98,4 @@ export const FIELD_CONFIGS = {
       { value: 'High', label: 'High', color: 'bg-red-500/20 text-red-500 border-red-500/50' },
     ]
   },
-  // Add other field configurations...
 } as const; 

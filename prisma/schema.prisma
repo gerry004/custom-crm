@@ -79,4 +79,30 @@ model Finance {
   user        User     @relation(fields: [userId], references: [id])
 
   @@map("finances")
+}
+
+model Option {
+  id          Int           @id @default(autoincrement())
+  label       String
+  value       String
+  color       String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  fieldOptions FieldOptions[]
+
+  @@map("options")
+}
+
+model FieldOptions {
+  id          Int      @id @default(autoincrement())
+  tableName   String   @map("table_name")
+  columnName  String   @map("column_name")
+  option      Option   @relation(fields: [optionId], references: [id])
+  optionId    Int      @map("option_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([tableName, columnName, optionId])
+  @@map("field_options")
 } 

@@ -49,7 +49,7 @@ export default function TablePage({ params }: { params: { table: string } }) {
       const columnsData = await columnsResponse.json();
       const tableData = await dataResponse.json();
 
-      // Format dates for tasks and finances
+      // Format dates
       const formattedData = ['tasks', 'finances'].includes(table)
         ? tableData.map((item: any) => {
             const formattedItem = { ...item };
@@ -62,7 +62,9 @@ export default function TablePage({ params }: { params: { table: string } }) {
           })
         : tableData;
 
-      setColumns(formatColumns(columnsData));
+      // Format columns with table name for options lookup
+      const formattedColumns = await formatColumns(columnsData, table);
+      setColumns(formattedColumns);
       setData(formattedData);
     } catch (err) {
       console.error('Error in fetchData:', err);
