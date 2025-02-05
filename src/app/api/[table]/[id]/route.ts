@@ -13,31 +13,36 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const tableName = getTableName(params.table);
-    if (!tableName) {
+    const modelMap = {
+      tasks: 'task',
+      leads: 'lead',
+      customers: 'customer',
+      finances: 'finance'
+    } as const;
+    
+    const modelName = modelMap[params.table as keyof typeof modelMap];
+    if (!modelName) {
       return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
     }
 
-    // Convert string id to integer
-    const id = parseInt(params.id);
-    if (isNaN(id)) {
-      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
-    }
-
-    const model = getPrismaModel(prisma, tableName);
+    const model = prisma[modelName];
 
     // Verify the item belongs to the user
-    const item = await model.findUnique({
-      where: { id },
-      select: { userId: true }
+    const item = await model.findFirst({
+      where: {
+        id: params.table === 'finances' ? params.id : parseInt(params.id),
+        userId: user.id
+      }
     });
 
-    if (!item || item.userId !== user.id) {
+    if (!item) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
     await model.delete({
-      where: { id },
+      where: {
+        id: params.table === 'finances' ? params.id : parseInt(params.id)
+      }
     });
 
     return NextResponse.json({ success: true });
