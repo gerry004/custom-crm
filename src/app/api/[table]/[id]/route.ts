@@ -65,13 +65,26 @@ export async function PATCH(
       if ('amount' in data) {
         data.amount = parseFloat(data.amount);
       }
-      
-      // Handle date field
-      if ('date' in data) {
-        // If empty string or invalid date, set to null
-        data.date = data.date ? new Date(data.date).toISOString() : null;
-      }
     }
+    
+    // Handle date fields for all tables
+    const dateFields = {
+      finances: ['date'],
+      leads: [], // leads only has createdAt/updatedAt which are handled by Prisma
+      customers: ['lastContact'], // matches @map("last_contact") in schema
+      tasks: ['dueDate'] // matches @map("due_date") in schema
+    };
+
+    // Get date fields for current table
+    const tableDateFields = dateFields[params.table as keyof typeof dateFields] || [];
+    
+    // Process each date field
+    tableDateFields.forEach(field => {
+      if (field in data) {
+        // If empty string or invalid date, set to null
+        data[field] = data[field] ? new Date(data[field]).toISOString() : null;
+      }
+    });
 
     const tableName = getTableName(params.table);
     if (!tableName) {
