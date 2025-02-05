@@ -1,34 +1,40 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getTableName } from '@/lib/tableUtils';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(
+  request: Request,
+  { params }: { params: { table: string } }
+) {
   try {
-    // First, find out what tables exist in our database
+    const tableName = getTableName(params.table);
+    if (!tableName) {
+      return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
+    }
+
     const tables = await prisma.$queryRaw<Array<{ tablename: string }>>`
       SELECT tablename 
       FROM pg_catalog.pg_tables 
       WHERE schemaname = 'public';
     `;
 
-    // Get the correct customer table name
-    const customerTable = tables
+    const dbTable = tables
       .map(t => t.tablename)
-      .find(name => name.toLowerCase().includes('customer'));
+      .find(name => name.toLowerCase().includes(tableName.slice(0, -1)));
 
-    if (!customerTable) {
+    if (!dbTable) {
       return NextResponse.json(
-        { error: 'Customer table not found' },
+        { error: `${tableName} table not found` },
         { status: 404 }
       );
     }
 
-    // Get the columns from the correct table, excluding automatic timestamp fields
     const columns = await prisma.$queryRaw<Array<{ column_name: string }>>`
       SELECT column_name 
       FROM information_schema.columns 
-      WHERE table_name = ${customerTable}
+      WHERE table_name = ${dbTable}
       AND column_name NOT IN ('id')
       ORDER BY ordinal_position;
     `;
@@ -37,7 +43,7 @@ export async function GET() {
     
     return NextResponse.json(columnNames);
   } catch (error) {
-    console.error('Error fetching columns:', error);
+    console.error(`Error fetching ${params.table} columns:`, error);
     return NextResponse.json(
       { error: 'Failed to fetch columns' },
       { status: 500 }
