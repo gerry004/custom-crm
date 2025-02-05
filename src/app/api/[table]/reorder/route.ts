@@ -30,8 +30,8 @@ export async function POST(
     });
 
     // Find the indices
-    const fromIndex = items.findIndex(item => item.id === fromId);
-    const toIndex = items.findIndex(item => item.id === toId);
+    const fromIndex = items.findIndex((item: { id: any; }) => item.id === fromId);
+    const toIndex = items.findIndex((item: { id: any; }) => item.id === toId);
 
     if (fromIndex === -1 || toIndex === -1) {
       return NextResponse.json(

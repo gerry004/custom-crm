@@ -12,7 +12,7 @@ model Lead {
   name      String
   email     String?
   phone     String?
-  status    String?   @default("New")
+  status    String? 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   userId    Int      @map("user_id")
@@ -26,7 +26,7 @@ model Customer {
   name        String
   email       String?
   phone       String?
-  status      String?   @default("Pending")
+  status      String?  
   lastContact DateTime? @map("last_contact")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -40,8 +40,8 @@ model Task {
   id          Int      @id @default(autoincrement())
   title       String
   description String?
-  status      String?   @default("To Do")
-  priority    String?   @default("Medium")
+  status      String?  
+  priority    String?   
   dueDate     DateTime? @map("due_date")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

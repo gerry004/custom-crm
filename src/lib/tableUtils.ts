@@ -1,6 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 
-export type TableName = 'leads' | 'tasks' | 'finances' | 'customers';
+export const MODEL_MAP = {
+  tasks: 'task',
+  leads: 'lead',
+  customers: 'customer',
+  finances: 'finance'
+} as const;
+
+export type TableName = keyof typeof MODEL_MAP;
+export type ModelName = (typeof MODEL_MAP)[TableName];
+
+export function getTableName(table: string): ModelName | null {
+  return MODEL_MAP[table as TableName] || null;
+}
+
+export function getPrismaModel(prisma: PrismaClient, tableName: ModelName) {
+  return prisma[tableName] as any;
+}
 
 interface TableConfig {
   defaultStatus?: string;
@@ -28,29 +44,12 @@ export const tableConfigs: Record<TableName, TableConfig> = {
   }
 };
 
-export function getTableName(table: string): TableName | null {
-  if (isValidTable(table)) {
-    return table as TableName;
-  }
-  return null;
-}
-
 export function isValidTable(table: string): table is TableName {
   return Object.keys(tableConfigs).includes(table);
 }
 
-export function getPrismaModel(prisma: PrismaClient, table: TableName) {
-  const modelMap = {
-    leads: prisma.lead,
-    tasks: prisma.task,
-    finances: prisma.finance,
-    customers: prisma.customer
-  };
-  return modelMap[table];
-}
-
-export function processData(data: any, table: TableName) {
-  const config = tableConfigs[table];
+export function processData(data: any, table: string) {
+  const config = tableConfigs[table as TableName];
   const processed = { ...data };
 
   // Handle date fields

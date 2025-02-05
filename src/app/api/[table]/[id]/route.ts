@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { getTableName, getPrismaModel, processData } from '@/lib/tableUtils';
+import { getTableName, getPrismaModel } from '@/lib/tableUtils';
 
 export async function DELETE(
   request: Request,
@@ -13,21 +13,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const modelMap = {
-      tasks: 'task',
-      leads: 'lead',
-      customers: 'customer',
-      finances: 'finance'
-    } as const;
-    
-    const modelName = modelMap[params.table as keyof typeof modelMap];
-    if (!modelName) {
+    const tableName = getTableName(params.table);
+    if (!tableName) {
       return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
     }
 
-    const model = prisma[modelName];
+    const model = getPrismaModel(prisma, tableName);
 
-    // Verify the item belongs to the user
     const item = await model.findFirst({
       where: {
         id: params.table === 'finances' ? params.id : parseInt(params.id),
@@ -81,19 +73,12 @@ export async function PATCH(
       }
     }
 
-    const modelMap = {
-      tasks: 'task',
-      leads: 'lead',
-      customers: 'customer',
-      finances: 'finance'
-    } as const;
-    
-    const modelName = modelMap[params.table as keyof typeof modelMap];
-    if (!modelName) {
+    const tableName = getTableName(params.table);
+    if (!tableName) {
       return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
     }
 
-    const model = prisma[modelName];
+    const model = getPrismaModel(prisma, tableName);
 
     // Verify the item exists and belongs to the user before updating
     const existingItem = await model.findFirst({

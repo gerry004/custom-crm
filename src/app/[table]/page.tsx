@@ -52,7 +52,7 @@ export default function TablePage({ params }: { params: { table: string } }) {
       // Format dates without modifying the order
       const formattedData = tableData.map((item: any) => {
         const formattedItem = { ...item };
-        columnsData.forEach(col => {
+        columnsData.forEach((col: { data_type: string; column_name: string | number; }) => {
           if (
             (col.data_type === 'timestamp' || col.data_type === 'date') && 
             formattedItem[col.column_name]

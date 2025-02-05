@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { getTableName, getPrismaModel, processData, isValidTable } from '@/lib/tableUtils';
+import { getTableName, getPrismaModel, processData } from '@/lib/tableUtils';
 
 export async function GET(
   request: Request,

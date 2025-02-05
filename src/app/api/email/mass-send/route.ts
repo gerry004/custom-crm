@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       leads.map(lead => 
         transporter.sendMail({
           from,
-          to: lead.email,
+          to: lead.email || '',
           subject,
           text: body,
           attachments: processedAttachments,
