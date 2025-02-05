@@ -50,17 +50,18 @@ export default function TablePage({ params }: { params: { table: string } }) {
       const tableData = await dataResponse.json();
 
       // Format dates
-      const formattedData = ['tasks', 'finances'].includes(table)
-        ? tableData.map((item: any) => {
-            const formattedItem = { ...item };
-            Object.keys(formattedItem).forEach(key => {
-              if (isDateField(key) && formattedItem[key]) {
-                formattedItem[key] = formatDateForInput(formattedItem[key]);
-              }
-            });
-            return formattedItem;
-          })
-        : tableData;
+      const formattedData = tableData.map((item: any) => {
+        const formattedItem = { ...item };
+        columnsData.forEach(col => {
+          if (
+            (col.data_type === 'timestamp' || col.data_type === 'date') && 
+            formattedItem[col.column_name]
+          ) {
+            formattedItem[col.column_name] = formatDateForInput(formattedItem[col.column_name]);
+          }
+        });
+        return formattedItem;
+      });
 
       // Format columns with table name for options lookup
       const formattedColumns = await formatColumns(columnsData, table);

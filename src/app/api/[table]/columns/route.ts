@@ -31,17 +31,23 @@ export async function GET(
       );
     }
 
-    const columns = await prisma.$queryRaw<Array<{ column_name: string }>>`
-      SELECT column_name 
+    // Get column information including data types
+    const columns = await prisma.$queryRaw<Array<{ 
+      column_name: string;
+      data_type: string;
+      udt_name: string;
+    }>>`
+      SELECT 
+        column_name,
+        data_type,
+        udt_name
       FROM information_schema.columns 
       WHERE table_name = ${dbTable}
       AND column_name NOT IN ('id')
       ORDER BY ordinal_position;
     `;
 
-    const columnNames = columns.map(col => col.column_name);
-    
-    return NextResponse.json(columnNames);
+    return NextResponse.json(columns);
   } catch (error) {
     console.error(`Error fetching ${params.table} columns:`, error);
     return NextResponse.json(

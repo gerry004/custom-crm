@@ -1,4 +1,4 @@
-import { ColumnFormat, FieldConfig, FIELD_CONFIGS } from '@/types/fieldTypes';
+import { ColumnFormat, FieldConfig, FieldType } from '@/types/fieldTypes';
 
 async function getFieldOptions(tableName: string, columnName: string) {
   try {
@@ -13,8 +13,49 @@ async function getFieldOptions(tableName: string, columnName: string) {
   }
 }
 
-// Helper to detect field type from column name and data
-async function detectFieldConfig(dbColumn: string, tableName: string): Promise<FieldConfig> {
+// Helper to detect field type from schema data type
+function getFieldTypeFromSchema(dataType: string, udtName: string): FieldType {
+  switch (dataType.toLowerCase()) {
+    case 'timestamp':
+    case 'timestamp without time zone':
+    case 'timestamp with time zone':
+    case 'date':
+      return dataType === 'date' ? 'date' : 'timestamp';
+    
+    case 'numeric':
+    case 'decimal':
+    case 'real':
+    case 'double precision':
+    case 'integer':
+    case 'bigint':
+    case 'smallint':
+      return 'number';
+    
+    case 'character varying':
+    case 'text':
+      switch (udtName.toLowerCase()) {
+        case 'email':
+          return 'email';
+        case 'phone':
+          return 'phone';
+        case 'url':
+          return 'url';
+        default:
+          return 'text';
+      }
+    
+    default:
+      return 'text';
+  }
+}
+
+// Helper to detect field type from column info
+async function detectFieldConfig(
+  dbColumn: string, 
+  tableName: string,
+  dataType: string,
+  udtName: string
+): Promise<FieldConfig> {
   const columnLower = dbColumn.toLowerCase();
   
   // First check if this field has any options in the database
@@ -27,38 +68,39 @@ async function detectFieldConfig(dbColumn: string, tableName: string): Promise<F
     };
   }
 
-  // If no options found, continue with other field type detection
-  if (columnLower.includes('_at') || 
-      columnLower.includes('date') || 
-      columnLower.includes('last_contact')) {
-    return {
-      type: columnLower.includes('_at') ? 'timestamp' : 'date',
-      label: formatColumnLabel(dbColumn),
-      readOnly: columnLower.includes('created_at') || columnLower.includes('updated_at')
-    };
-  }
+  // Get base type from schema
+  const baseType = getFieldTypeFromSchema(dataType, udtName);
 
-  // Other field types
-  if (columnLower.includes('email')) {
-    return { type: 'email', label: formatColumnLabel(dbColumn) };
-  }
-  if (columnLower.includes('phone')) {
-    return { type: 'phone', label: formatColumnLabel(dbColumn) };
-  }
-  if (columnLower.includes('amount') || columnLower.includes('price')) {
-    return { 
-      type: 'currency',
-      label: formatColumnLabel(dbColumn),
-      step: 0.01,
-      min: 0
-    };
-  }
-  if (columnLower.includes('description')) {
-    return { type: 'longtext', label: formatColumnLabel(dbColumn) };
-  }
+  // Customize config based on type and column
+  switch (baseType) {
+    case 'timestamp':
+    case 'date':
+      return {
+        type: baseType,
+        label: formatColumnLabel(dbColumn),
+        readOnly: columnLower.includes('created_at') || columnLower.includes('updated_at')
+      };
 
-  // Default to text
-  return { type: 'text', label: formatColumnLabel(dbColumn) };
+    case 'number':
+      if (columnLower.includes('amount') || columnLower.includes('price')) {
+        return {
+          type: 'currency',
+          label: formatColumnLabel(dbColumn),
+          step: 0.01,
+          min: 0
+        };
+      }
+      return {
+        type: 'number',
+        label: formatColumnLabel(dbColumn)
+      };
+
+    default:
+      return {
+        type: 'text' as const,
+        label: formatColumnLabel(dbColumn)
+      };
+  }
 }
 
 function formatColumnLabel(dbColumn: string): string {
@@ -68,28 +110,39 @@ function formatColumnLabel(dbColumn: string): string {
     .join(' ');
 }
 
-export async function formatColumnName(dbColumn: string, tableName: string): Promise<ColumnFormat> {
-  const key = dbColumn
+export async function formatColumnName(
+  column: { column_name: string; data_type: string; udt_name: string }, 
+  tableName: string
+): Promise<ColumnFormat> {
+  const key = column.column_name
     .toLowerCase()
     .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
-  const fieldConfig = await detectFieldConfig(dbColumn, tableName);
+  const fieldConfig = await detectFieldConfig(
+    column.column_name, 
+    tableName, 
+    column.data_type,
+    column.udt_name
+  );
 
   return {
     key,
-    dbColumn,
+    dbColumn: column.column_name,
     fieldConfig
   };
 }
 
-export async function formatColumns(dbColumns: string[], tableName: string): Promise<ColumnFormat[]> {
-  if (!Array.isArray(dbColumns)) {
-    console.warn('formatColumns received invalid input:', dbColumns);
+export async function formatColumns(
+  columns: Array<{ column_name: string; data_type: string; udt_name: string }>, 
+  tableName: string
+): Promise<ColumnFormat[]> {
+  if (!Array.isArray(columns)) {
+    console.warn('formatColumns received invalid input:', columns);
     return [];
   }
   
   const formattedColumns = await Promise.all(
-    dbColumns.map(dbColumn => formatColumnName(dbColumn, tableName))
+    columns.map(column => formatColumnName(column, tableName))
   );
   
   return formattedColumns;
