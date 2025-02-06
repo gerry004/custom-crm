@@ -2,6 +2,7 @@ import React from 'react';
 import { ColumnFormat, FieldConfig } from '@/types/fieldTypes';
 import StatusDropdown from './StatusDropdown';
 import { formatDateForDisplay, formatDateForInput } from '@/utils/dateFormatter';
+import { getColorStyles } from '@/utils/colorUtils';
 
 interface DataTableFieldProps {
   column: ColumnFormat;
@@ -27,6 +28,20 @@ export const DataTableField: React.FC<DataTableFieldProps> = ({
       onChange={onChange}
       onBlur={onBlur}
     />;
+  }
+
+  if (fieldConfig.type === 'status' || fieldConfig.type === 'tag') {
+    const option = fieldConfig.options?.find(opt => opt.value === value);
+    if (option?.color) {
+      return (
+        <span
+          className="inline-block px-2 py-1 rounded-full text-sm border"
+          style={getColorStyles(option.color)}
+        >
+          {option?.label || value}
+        </span>
+      );
+    }
   }
 
   return <DisplayField fieldConfig={fieldConfig} value={value} />;
@@ -114,7 +129,10 @@ const DisplayField: React.FC<{
     case 'option': {
       const option = fieldConfig.options.find(opt => opt.value === value);
       return option ? (
-        <span className={`px-2 py-1 rounded-full text-sm border ${option.color}`}>
+        <span 
+          className="inline-block px-2 py-1 rounded-full text-sm border"
+          style={getColorStyles(option.color)}
+        >
           {option.label}
         </span>
       ) : value;

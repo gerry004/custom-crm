@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiPlus, FiTrash } from 'react-icons/fi';
 import { TwitterPicker } from 'react-color';
+import { getColorStyles } from '@/utils/colorUtils';
 
 interface Option {
   id: number;
@@ -142,8 +143,8 @@ export default function ManageOptionsModal({
               <div className="relative">
                 <button
                   onClick={() => setEditingColorId(editingColorId === option.id ? null : option.id)}
-                  className="w-8 h-8 rounded"
-                  style={{ backgroundColor: option.color }}
+                  className="w-8 h-8 rounded border"
+                  style={getColorStyles(option.color)}
                 />
                 {editingColorId === option.id && (
                   <div className="absolute top-full right-0 mt-2 z-10">

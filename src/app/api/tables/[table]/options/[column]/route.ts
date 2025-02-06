@@ -69,25 +69,22 @@ export async function POST(
       // Create new options and field options
       for (const [index, option] of options.entries()) {
         let optionRecord;
+        const optionData = {
+          label: option.label,
+          value: option.value || option.label,
+          color: option.color || null, // Ensure color is included
+        };
         
         if (option.id > 0) {
           // Update existing option
           optionRecord = await tx.option.update({
             where: { id: option.id },
-            data: {
-              label: option.label,
-              value: option.value || option.label,
-              color: option.color,
-            },
+            data: optionData,
           });
         } else {
           // Create new option
           optionRecord = await tx.option.create({
-            data: {
-              label: option.label,
-              value: option.value || option.label,
-              color: option.color,
-            },
+            data: optionData,
           });
         }
 
