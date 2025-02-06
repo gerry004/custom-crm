@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiTrash2, FiMove, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload, FiMail } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiMove, FiChevronUp, FiChevronDown, FiPlus, FiX, FiFilter, FiUpload, FiMail, FiSettings } from 'react-icons/fi';
 import CreateEntryModal from './CreateEntryModal';
 import { searchObjects } from '@/utils/searchUtils';
 import CSVImportModal from './CSVImportModal';
 import { DataTableField } from './DataTableField';
 import { ColumnFormat, FieldConfig } from '@/types/fieldTypes';
 import EmailModal from './EmailModal';
+import ManageOptionsModal from './ManageOptionsModal';
 
 interface DataTableProps {
   columns: ColumnFormat[];
@@ -132,6 +133,11 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields, user }: D
   } | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [manageOptionsModal, setManageOptionsModal] = useState<{
+    isOpen: boolean;
+    tableName: string;
+    columnName: string;
+  } | null>(null);
 
   // Define default searchable fields based on type
   const defaultSearchFields = React.useMemo(() => {
@@ -434,21 +440,36 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields, user }: D
                   key={column.key}
                   className="px-6 py-3 text-left text-sm font-medium"
                 >
-                  <button
-                    className="flex items-center gap-2 hover:text-white w-full"
-                    onClick={() => handleSort(column.key)}
-                  >
-                    <span className="flex-grow">{column.fieldConfig.label}</span>
-                    {sortConfig[0]?.key === column.key && (
-                      <span className="text-blue-400">
-                        {sortConfig[0].direction === 'asc' ? (
-                          <FiChevronUp size={16} />
-                        ) : (
-                          <FiChevronDown size={16} />
-                        )}
-                      </span>
+                  <div className="flex items-center justify-between">
+                    <button
+                      className="flex items-center gap-2 hover:text-white"
+                      onClick={() => handleSort(column.key)}
+                    >
+                      <span>{column.fieldConfig.label}</span>
+                      {sortConfig[0]?.key === column.key && (
+                        <span className="text-blue-400">
+                          {sortConfig[0].direction === 'asc' ? (
+                            <FiChevronUp size={16} />
+                          ) : (
+                            <FiChevronDown size={16} />
+                          )}
+                        </span>
+                      )}
+                    </button>
+                    {column.fieldConfig.type === 'option' && (
+                      <button
+                        onClick={() => setManageOptionsModal({
+                          isOpen: true,
+                          tableName: type,
+                          columnName: column.key,
+                        })}
+                        className="text-gray-400 hover:text-white"
+                        title="Manage Options"
+                      >
+                        <FiSettings size={14} />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </th>
               ))}
               <th className="px-6 py-3 text-left text-sm font-medium">
@@ -593,6 +614,16 @@ const DataTable = ({ columns, data, type, onRefresh, searchableFields, user }: D
           }}
           toEmail={selectedLead.email}
           fromEmail={user?.email || ''}
+        />
+      )}
+
+      {manageOptionsModal && (
+        <ManageOptionsModal
+          isOpen={manageOptionsModal.isOpen}
+          onClose={() => setManageOptionsModal(null)}
+          tableName={manageOptionsModal.tableName}
+          columnName={manageOptionsModal.columnName}
+          onSuccess={onRefresh}
         />
       )}
     </div>
